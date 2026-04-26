@@ -70,7 +70,9 @@ function SimulationContent() {
   const { status, error: pollError } = useStatusPoller(simId);
   const [results, setResults] = useState<SimulationResults | null>(null);
   const [motorDetail, setMotorDetail] = useState<MotorDetail | null>(null);
-  const [copied, setCopied] = useState<"payload" | "error" | null>(null);
+  const [motorDetailError, setMotorDetailError] = useState(false);
+  const [payloadCopied, setPayloadCopied] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
   const fetchingRef = useRef(false);
 
   // Fetch results once simulation is done
@@ -86,27 +88,51 @@ function SimulationContent() {
     }
   }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch motor detail once simulation fails
+  // Fetch motor detail once simulation fails so copy buttons have data
   useEffect(() => {
-    if (status?.status === "failed" && !motorDetail) {
+    if (status?.status === "failed" && !motorDetail && !motorDetailError) {
+      setMotorDetailError(false);
       api
-        .getSimulation(simId)
-        .then((sim) => api.getMotor(sim.motor_id))
+        .listSimulations()
+        .then((sims) => {
+          const sim = sims.find((s) => s.simulation_id === simId);
+          if (!sim) throw new Error("Simulation not found");
+          return api.getMotor(sim.motor_id);
+        })
         .then(setMotorDetail)
-        .catch(() => {});
+        .catch((err) => {
+          console.error("[SimulationClient] failed to load motor detail:", err);
+          setMotorDetailError(true);
+        });
     }
   }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleCopyPayload() {
-    if (!motorDetail) return;
-    navigator.clipboard.writeText(JSON.stringify(motorDetail.config, null, 2));
-    setCopied("payload");
-    setTimeout(() => setCopied(null), 2000);
+  async function writeToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback: create a temporary textarea and use execCommand
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
   }
 
-  function handleCopyErrorReport() {
+  async function handleCopyPayload() {
+    if (!motorDetail) return;
+    await writeToClipboard(JSON.stringify(motorDetail.config, null, 2));
+    setPayloadCopied(true);
+    setTimeout(() => setPayloadCopied(false), 2000);
+  }
+
+  async function handleCopyErrorReport() {
     if (!motorDetail || !status) return;
-    const report = [
+    const lines = [
       "## Simulation Failure Report",
       `Simulation ID: ${simId}`,
       `Motor ID: ${motorDetail.motor_id}`,
@@ -117,10 +143,10 @@ function SimulationContent() {
       "",
       "## Motor Configuration (JSON)",
       JSON.stringify(motorDetail.config, null, 2),
-    ].join("\n");
-    navigator.clipboard.writeText(report);
-    setCopied("error");
-    setTimeout(() => setCopied(null), 2000);
+    ];
+    await writeToClipboard(lines.join("\n"));
+    setReportCopied(true);
+    setTimeout(() => setReportCopied(false), 2000);
   }
 
   return (
@@ -164,13 +190,18 @@ function SimulationContent() {
                 Simulation Failed
               </CardTitle>
               <div className="flex shrink-0 gap-2">
+                {motorDetailError && (
+                  <p className="text-xs text-muted-foreground self-center">
+                    Could not load motor data
+                  </p>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={!motorDetail}
                   onClick={handleCopyPayload}
                 >
-                  {copied === "payload" ? "Copied!" : "Copy Motor Payload"}
+                  {payloadCopied ? "Copied!" : "Copy Motor Payload"}
                 </Button>
                 <Button
                   variant="outline"
@@ -178,7 +209,7 @@ function SimulationContent() {
                   disabled={!motorDetail}
                   onClick={handleCopyErrorReport}
                 >
-                  {copied === "error" ? "Copied!" : "Copy Error Report"}
+                  {reportCopied ? "Copied!" : "Copy Error Report"}
                 </Button>
               </div>
             </CardHeader>
