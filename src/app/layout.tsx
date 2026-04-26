@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils";
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Machwave",
+  title: {
+    default: "machwave",
+    template: "%s · machwave",
+  },
   description: "Internal ballistics simulation platform for rocket motors",
 };
 

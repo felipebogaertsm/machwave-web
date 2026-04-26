@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { TriangleAlert, Loader2 } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -12,24 +13,41 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useApiClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 function SettingsPage() {
   const api = useApiClient();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const [clearOpen, setClearOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [emailConfirm, setEmailConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function handleClearAccount() {
     if (!user) return;
-    if (
-      !confirm("This will permanently clear your account data. Are you sure?")
-    )
-      return;
+    setError(null);
     setClearing(true);
     try {
       await api.clearAccount(user.uid);
+      setClearOpen(false);
+    } catch (e) {
+      setError(errorMessage(e));
     } finally {
       setClearing(false);
     }
@@ -37,32 +55,34 @@ function SettingsPage() {
 
   async function handleDeleteAccount() {
     if (!user?.email) return;
-    const input = prompt(
-      `This will permanently delete your account. Type your email to confirm:`,
-    );
-    if (input !== user.email) return;
+    if (emailConfirm.trim() !== user.email) return;
+    setError(null);
     setDeleting(true);
     try {
       await api.deleteAccount(user.uid, user.email);
-    } finally {
+      await logout();
+      router.replace("/login");
+    } catch (e) {
+      setError(errorMessage(e));
       setDeleting(false);
     }
   }
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
-        <div>
+      <div className="mx-auto max-w-3xl space-y-8">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">
-            Account Settings
+            account settings
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage your account preferences.
           </p>
         </div>
+
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle className="text-lg">Profile</CardTitle>
             <CardDescription>Your account details.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -97,44 +117,188 @@ function SettingsPage() {
                 <>
                   <dt className="text-muted-foreground">Sign-in method</dt>
                   <dd className="capitalize">
-                    {user.providerData[0].providerId.replace(".com", "")}
+                    {formatProvider(user.providerData[0].providerId)}
                   </dd>
                 </>
               )}
             </dl>
           </CardContent>
         </Card>
-        <Card className="border-red-500/50">
+
+        <Card className="border-destructive/40">
           <CardHeader>
-            <CardTitle className="text-red-500">Danger Zone</CardTitle>
+            <CardTitle className="text-lg text-destructive">
+              Danger Zone
+            </CardTitle>
             <CardDescription>
               Irreversible actions for your account.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <Button
-              variant="outline"
-              className="w-full border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
-              onClick={handleClearAccount}
-              disabled={clearing}
-            >
-              <TriangleAlert className="h-4 w-4 mr-2" />
-              {clearing ? "Clearing..." : "Clear account"}
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
-              onClick={handleDeleteAccount}
-              disabled={deleting || !user?.email}
-            >
-              <TriangleAlert className="h-4 w-4 mr-2" />
-              {deleting ? "Deleting..." : "Delete account"}
-            </Button>
+          <CardContent className="space-y-4">
+            <DangerRow
+              title="Clear account data"
+              description="Delete every motor and simulation in your account. Your login stays active."
+              action={
+                <Button
+                  variant="outline"
+                  className="border-orange-500/60 text-orange-600 hover:bg-orange-500 hover:text-white dark:text-orange-400"
+                  onClick={() => {
+                    setError(null);
+                    setClearOpen(true);
+                  }}
+                  disabled={!user}
+                >
+                  <TriangleAlert className="mr-2 h-4 w-4" />
+                  Clear data
+                </Button>
+              }
+            />
+            <DangerRow
+              title="Delete account"
+              description="Permanently delete your account and all associated data. This cannot be undone."
+              action={
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setError(null);
+                    setEmailConfirm("");
+                    setDeleteOpen(true);
+                  }}
+                  disabled={!user?.email}
+                >
+                  <TriangleAlert className="mr-2 h-4 w-4" />
+                  Delete account
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={clearOpen}
+        onOpenChange={(open) => {
+          if (!clearing) setClearOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear account data?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes every motor and simulation in your
+              account. You will stay signed in.
+            </DialogDescription>
+          </DialogHeader>
+          {error && <ErrorMessage message={error} />}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={clearing}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleClearAccount}
+              disabled={clearing}
+            >
+              {clearing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {clearing ? "Clearing..." : "Clear data"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!deleting) setDeleteOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes your account and all associated data.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-email">
+              Type{" "}
+              <span className="font-mono text-foreground">{user?.email}</span>{" "}
+              to confirm.
+            </Label>
+            <Input
+              id="confirm-email"
+              type="email"
+              autoComplete="off"
+              value={emailConfirm}
+              onChange={(e) => setEmailConfirm(e.target.value)}
+              placeholder={user?.email ?? ""}
+              disabled={deleting}
+            />
+          </div>
+          {error && <ErrorMessage message={error} />}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={deleting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleting || emailConfirm.trim() !== user?.email}
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleting ? "Deleting..." : "Delete account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
+}
+
+function DangerRow({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-0.5">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
+}
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      {message}
+    </p>
+  );
+}
+
+function errorMessage(e: unknown): string {
+  if (typeof e === "object" && e !== null && "message" in e) {
+    const msg = (e as { message?: unknown }).message;
+    if (typeof msg === "string" && msg.length > 0) return msg;
+  }
+  return "Something went wrong. Please try again.";
+}
+
+function formatProvider(providerId: string): string {
+  if (providerId === "password") return "Email & password";
+  return providerId.replace(/\.com$/, "");
 }
 
 export default function Page() {

@@ -155,7 +155,7 @@ function SimulationContent() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Simulation</h1>
+            <h1 className="text-2xl font-bold tracking-tight">simulation</h1>
             <p className="font-mono text-xs text-muted-foreground">{simId}</p>
           </div>
           {status && (

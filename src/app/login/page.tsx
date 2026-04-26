@@ -59,7 +59,9 @@ export default function LoginPage() {
           <div className="flex justify-center mb-2">
             <Rocket className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Machwave</CardTitle>
+          <CardTitle className="font-mono text-2xl font-bold lowercase tracking-tight">
+            machwave
+          </CardTitle>
           <CardDescription>
             {mode === "login"
               ? "Sign in to your account"

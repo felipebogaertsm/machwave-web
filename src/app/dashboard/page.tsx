@@ -62,7 +62,7 @@ function DashboardContent() {
     <AppLayout>
       <div className="mx-auto max-w-5xl space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">dashboard</h1>
           <Button asChild>
             <Link href="/motors/new">
               <Plus className="mr-2 h-4 w-4" />

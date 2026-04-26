@@ -9,7 +9,7 @@ export default function NewMotorPage() {
     <ProtectedRoute>
       <AppLayout>
         <div className="mx-auto max-w-2xl">
-          <h1 className="mb-8 text-2xl font-bold">Create New Motor</h1>
+          <h1 className="mb-8 text-2xl font-bold tracking-tight">new motor</h1>
           <MotorWizard />
         </div>
       </AppLayout>
