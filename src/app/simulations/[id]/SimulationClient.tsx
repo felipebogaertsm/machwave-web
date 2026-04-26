@@ -91,7 +91,6 @@ function SimulationContent() {
   // Fetch motor detail once simulation fails so copy buttons have data
   useEffect(() => {
     if (status?.status === "failed" && !motorDetail && !motorDetailError) {
-      setMotorDetailError(false);
       api
         .listSimulations()
         .then((sims) => {
