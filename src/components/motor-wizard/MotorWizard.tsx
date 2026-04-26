@@ -152,7 +152,13 @@ export function MotorWizard() {
       </p>
 
       {/* Step content */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.preventDefault();
+        }}
+        className="space-y-6"
+      >
         {currentStep === "Propellant" && (
           <PropellantStep control={control} errors={errors} />
         )}

@@ -172,7 +172,11 @@ function SegmentField({
             type="number"
             step={step}
             {...field}
-            value={typeof field.value === "number" ? field.value : ""}
+            value={
+              typeof field.value === "number" && !isNaN(field.value as number)
+                ? field.value
+                : ""
+            }
             onChange={(e) => field.onChange(parseFloat(e.target.value))}
             className="h-8 text-sm"
           />
