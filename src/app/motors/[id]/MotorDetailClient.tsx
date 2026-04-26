@@ -46,8 +46,10 @@ function MotorDetailContent() {
   async function handleSimulate() {
     setSimulating(true);
     try {
-      const { sim_id } = await api.createSimulation({ motor_id: motorId });
-      router.push(`/simulations/${sim_id}`);
+      const { simulation_id } = await api.createSimulation({
+        motor_id: motorId,
+      });
+      router.push(`/simulations/${simulation_id}`);
     } catch {
       setError("Failed to start simulation");
       setSimulating(false);

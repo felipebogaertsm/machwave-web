@@ -80,7 +80,7 @@ export interface CreateSimulationRequest {
 }
 
 export interface SimulationSummary {
-  sim_id: string;
+  simulation_id: string;
   motor_id: string;
   status: "pending" | "running" | "done" | "failed";
   created_at: string;
@@ -88,7 +88,7 @@ export interface SimulationSummary {
 }
 
 export interface SimulationStatusRecord {
-  sim_id: string;
+  simulation_id: string;
   status: "pending" | "running" | "done" | "failed";
   error: string | null;
   created_at: string;
@@ -96,7 +96,7 @@ export interface SimulationStatusRecord {
 }
 
 export interface SimulationResults {
-  sim_id: string;
+  simulation_id: string;
   t: number[];
   thrust: number[];
   P_0: number[];
@@ -186,8 +186,8 @@ export class ApiClient {
 
   async createSimulation(
     body: CreateSimulationRequest,
-  ): Promise<{ sim_id: string }> {
-    const { data } = await this.http.post<{ sim_id: string }>(
+  ): Promise<{ simulation_id: string }> {
+    const { data } = await this.http.post<{ simulation_id: string }>(
       "/simulations",
       body,
     );

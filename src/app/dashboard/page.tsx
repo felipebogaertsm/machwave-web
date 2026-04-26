@@ -126,14 +126,17 @@ function DashboardContent() {
             )}
             <div className="space-y-2">
               {sims.slice(0, 10).map((sim) => (
-                <Link key={sim.sim_id} href={`/simulations/${sim.sim_id}`}>
+                <Link
+                  key={sim.simulation_id}
+                  href={`/simulations/${sim.simulation_id}`}
+                >
                   <Card className="transition-shadow hover:shadow-md cursor-pointer">
                     <CardContent className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-sm font-medium">
                           Simulation{" "}
                           <span className="font-mono text-xs text-muted-foreground">
-                            {sim.sim_id.slice(0, 8)}
+                            {sim.simulation_id.slice(0, 8)}
                           </span>
                         </p>
                         <p className="text-xs text-muted-foreground">
