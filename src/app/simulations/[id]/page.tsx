@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+
+export function generateStaticParams() {
+  return [];
+}
 import { useApiClient, type SimulationResults } from "@/lib/api";
 import { useStatusPoller } from "@/components/simulation/useStatusPoller";
 import { SimulationResultsChart } from "@/components/simulation/SimulationResultsChart";
