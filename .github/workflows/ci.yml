@@ -20,7 +20,7 @@ jobs:
       - run: make install
       - run: make lint
 
-  type-check:
+  typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,10 +29,10 @@ jobs:
           node-version: "20"
           cache: "npm"
       - run: make install
-      - run: make type-check
+      - run: make typecheck
 
   build:
-    needs: [lint, type-check]
+    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

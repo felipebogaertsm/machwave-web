@@ -1,4 +1,4 @@
-.PHONY: install dev build lint type-check run stop clean
+.PHONY: install dev build lint format typecheck run stop clean
 
 install:
 	@npm ci
@@ -12,8 +12,11 @@ build:
 lint:
 	@npm run lint
 
-type-check:
-	@npm run type-check
+format:
+	@npm run format
+
+typecheck:
+	@npm run typecheck
 
 run:
 	@docker compose up --build

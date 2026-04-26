@@ -223,6 +223,12 @@ export class ApiClient {
   async deleteSimulation(simId: string): Promise<void> {
     await this.http.delete(`/simulations/${simId}`);
   }
+
+  // ── Users ──────────────────────────────────────────────────────────────────
+
+  async clearAccount(userId: string): Promise<void> {
+    await this.http.delete(`/users/${userId}/clear`);
+  }
 }
 
 // ---------------------------------------------------------------------------
