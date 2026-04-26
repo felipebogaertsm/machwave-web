@@ -229,6 +229,10 @@ export class ApiClient {
   async clearAccount(userId: string): Promise<void> {
     await this.http.delete(`/users/${userId}/clear`);
   }
+
+  async deleteAccount(userId: string, email: string): Promise<void> {
+    await this.http.delete(`/users/${userId}`, { data: { email } });
+  }
 }
 
 // ---------------------------------------------------------------------------

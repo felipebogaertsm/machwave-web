@@ -19,6 +19,7 @@ function SettingsPage() {
   const api = useApiClient();
   const { user } = useAuth();
   const [clearing, setClearing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleClearAccount() {
     if (!user) return;
@@ -31,6 +32,20 @@ function SettingsPage() {
       await api.clearAccount(user.uid);
     } finally {
       setClearing(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!user?.email) return;
+    const input = prompt(
+      `This will permanently delete your account. Type your email to confirm:`,
+    );
+    if (input !== user.email) return;
+    setDeleting(true);
+    try {
+      await api.deleteAccount(user.uid, user.email);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -109,10 +124,11 @@ function SettingsPage() {
             <Button
               variant="outline"
               className="w-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
-              disabled
+              onClick={handleDeleteAccount}
+              disabled={deleting || !user?.email}
             >
               <TriangleAlert className="h-4 w-4 mr-2" />
-              Delete account
+              {deleting ? "Deleting..." : "Delete account"}
             </Button>
           </CardContent>
         </Card>
