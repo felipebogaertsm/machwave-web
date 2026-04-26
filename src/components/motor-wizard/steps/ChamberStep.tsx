@@ -72,7 +72,9 @@ export function ChamberStep({ control, errors }: Props) {
 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Thrust Chamber</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"> (kg)</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-sm">Dry Mass (kg)</Label>
             <Controller
               name="config.thrust_chamber.dry_mass"
               control={control}
