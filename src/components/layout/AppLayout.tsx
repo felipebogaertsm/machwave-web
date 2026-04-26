@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, LayoutDashboard, Menu, Rocket } from "lucide-react";
+import { Flame, LayoutDashboard, Menu, Rocket, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,19 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         <p className="truncate px-3 py-1 text-xs text-muted-foreground">
           {user?.email}
         </p>
+        <Link href="/settings" onClick={onNavClick}>
+          <span
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+              pathname === "/settings"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            Settings
+          </span>
+        </Link>
         <Button
           variant="ghost"
           size="sm"
