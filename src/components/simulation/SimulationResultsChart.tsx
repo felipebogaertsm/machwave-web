@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { SimulationResults } from "@/lib/api";
+import { paToMpa } from "@/lib/units";
 
 interface Props {
   results: SimulationResults;
@@ -32,7 +33,7 @@ export function SimulationResultsChart({ results }: Props) {
   const data = results.t.map((t, i) => ({
     t: parseFloat(t.toFixed(4)),
     thrust: parseFloat(results.thrust[i].toFixed(2)),
-    P_0_MPa: parseFloat((results.P_0[i] / 1e6).toFixed(4)),
+    P_0_MPa: parseFloat(paToMpa(results.P_0[i]).toFixed(4)),
     nozzle_efficiency: parseFloat(
       (results.nozzle_efficiency[i] * 100).toFixed(2),
     ),

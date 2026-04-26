@@ -17,20 +17,20 @@ interface Props {
 
 const chamberFields = [
   {
-    label: "Casing Inner Diameter (m)",
+    label: "Casing Inner Diameter (mm)",
     name: "casing_inner_diameter",
-    step: "0.001",
+    step: "0.1",
   },
   {
-    label: "Casing Outer Diameter (m)",
+    label: "Casing Outer Diameter (mm)",
     name: "casing_outer_diameter",
-    step: "0.001",
+    step: "0.1",
   },
-  { label: "Internal Length (m)", name: "internal_length", step: "0.001" },
+  { label: "Internal Length (mm)", name: "internal_length", step: "1" },
   {
-    label: "Thermal Liner Thickness (m)",
+    label: "Thermal Liner Thickness (mm)",
     name: "thermal_liner_thickness",
-    step: "0.001",
+    step: "0.1",
   },
 ] as const;
 
@@ -90,14 +90,14 @@ export function ChamberStep({ control, errors }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-sm">Nozzle Exit → Grain Port (m)</Label>
+            <Label className="text-sm">Nozzle Exit → Grain Port (mm)</Label>
             <Controller
               name="config.thrust_chamber.nozzle_exit_to_grain_port_distance"
               control={control}
               render={({ field }) => (
                 <Input
                   type="number"
-                  step="0.001"
+                  step="1"
                   {...field}
                   onChange={(e) => field.onChange(parseFloat(e.target.value))}
                 />

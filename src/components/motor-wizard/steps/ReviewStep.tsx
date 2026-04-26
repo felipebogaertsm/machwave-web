@@ -40,19 +40,20 @@ export function ReviewStep({ data }: Props) {
         {segs.map((seg, i) => (
           <div key={i} className="rounded-md border p-2 space-y-1">
             <p className="font-medium text-xs">Segment {i + 1}</p>
-            <Row label="OD" value={`${seg.outer_diameter * 1000} mm`} />
-            <Row label="Core" value={`${seg.core_diameter * 1000} mm`} />
-            <Row label="Length" value={`${seg.length * 1000} mm`} />
+            <Row label="OD" value={`${seg.outer_diameter} mm`} />
+            <Row label="Core" value={`${seg.core_diameter} mm`} />
+            <Row label="Length" value={`${seg.length} mm`} />
+            <Row label="Density Ratio" value={`${seg.density_ratio}%`} />
           </div>
         ))}
-        <Row label="Spacing" value={`${config.grain.spacing * 1000} mm`} />
+        <Row label="Spacing" value={`${config.grain.spacing} mm`} />
       </section>
 
       <section className="space-y-1">
         <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
           Nozzle
         </h4>
-        <Row label="Throat Ø" value={`${nozzle.throat_diameter * 1000} mm`} />
+        <Row label="Throat Ø" value={`${nozzle.throat_diameter} mm`} />
         <Row label="Expansion ratio" value={nozzle.expansion_ratio} />
         <Row label="Divergent angle" value={`${nozzle.divergent_angle}°`} />
       </section>
@@ -61,11 +62,8 @@ export function ReviewStep({ data }: Props) {
         <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
           Chamber
         </h4>
-        <Row
-          label="Inner Ø"
-          value={`${chamber.casing_inner_diameter * 1000} mm`}
-        />
-        <Row label="Length" value={`${chamber.internal_length * 1000} mm`} />
+        <Row label="Inner Ø" value={`${chamber.casing_inner_diameter} mm`} />
+        <Row label="Length" value={`${chamber.internal_length} mm`} />
         <Row label="Dry mass" value={`${config.thrust_chamber.dry_mass} kg`} />
       </section>
     </div>

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { motorFormSchema, type MotorForm } from "@/lib/validations";
 import { useApiClient } from "@/lib/api";
+import { toMotorApiConfig } from "@/lib/units";
 import { Button } from "@/components/ui/button";
 import { GrainStep } from "./steps/GrainStep";
 import { NozzleStep } from "./steps/NozzleStep";
@@ -24,25 +25,25 @@ const DEFAULT_VALUES: MotorForm = {
       segments: [
         {
           type: "bates",
-          outer_diameter: 0.069,
-          core_diameter: 0.025,
-          length: 0.12,
-          density_ratio: 1.0,
+          outer_diameter: 69,
+          core_diameter: 25,
+          length: 120,
+          density_ratio: 100,
         },
         {
           type: "bates",
-          outer_diameter: 0.069,
-          core_diameter: 0.025,
-          length: 0.12,
-          density_ratio: 1.0,
+          outer_diameter: 69,
+          core_diameter: 25,
+          length: 120,
+          density_ratio: 100,
         },
       ],
-      spacing: 0.003,
+      spacing: 3,
     },
     thrust_chamber: {
       nozzle: {
-        inlet_diameter: 0.04,
-        throat_diameter: 0.0235,
+        inlet_diameter: 40,
+        throat_diameter: 23.5,
         divergent_angle: 12,
         convergent_angle: 45,
         expansion_ratio: 8,
@@ -50,13 +51,13 @@ const DEFAULT_VALUES: MotorForm = {
         c_2: 0.0,
       },
       combustion_chamber: {
-        casing_inner_diameter: 0.072,
-        casing_outer_diameter: 0.076,
-        internal_length: 0.3,
-        thermal_liner_thickness: 0.003,
+        casing_inner_diameter: 72,
+        casing_outer_diameter: 76,
+        internal_length: 300,
+        thermal_liner_thickness: 3,
       },
       dry_mass: 1.2,
-      nozzle_exit_to_grain_port_distance: 0.02,
+      nozzle_exit_to_grain_port_distance: 20,
       center_of_gravity_coordinate: null,
     },
   },
@@ -118,7 +119,7 @@ export function MotorWizard() {
     try {
       const { motor_id } = await api.createMotor({
         name: data.name,
-        config: data.config,
+        config: toMotorApiConfig(data.config),
       });
       router.push(`/motors/${motor_id}`);
     } catch (err: unknown) {

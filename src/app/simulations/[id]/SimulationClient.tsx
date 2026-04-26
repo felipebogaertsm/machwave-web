@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { paToMpa } from "@/lib/units";
 
 function statusVariant(
   status: string,
@@ -163,7 +164,7 @@ function SimulationContent() {
                 />
                 <MetricCard
                   label="Max Chamber P"
-                  value={results.max_chamber_pressure / 1e6}
+                  value={paToMpa(results.max_chamber_pressure)}
                   unit="MPa"
                 />
                 <Card className="sm:col-span-2">

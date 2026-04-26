@@ -1,4 +1,4 @@
-.PHONY: install dev build lint type-check up down clean
+.PHONY: install dev build lint type-check run stop clean
 
 install:
 	@npm ci
@@ -15,10 +15,10 @@ lint:
 type-check:
 	@npm run type-check
 
-up:
+run:
 	@docker compose up --build
 
-down:
+stop:
 	@docker compose down
 
 clean:

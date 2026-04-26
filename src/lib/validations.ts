@@ -14,16 +14,20 @@ export const batesSegmentSchema = z
     outer_diameter: z
       .number()
       .positive("Must be positive")
-      .describe("Outer diameter [m]"),
+      .describe("Outer diameter [mm]"),
     core_diameter: z
       .number()
       .positive("Must be positive")
-      .describe("Core diameter [m]"),
+      .describe("Core diameter [mm]"),
     length: z
       .number()
       .positive("Must be positive")
-      .describe("Segment length [m]"),
-    density_ratio: z.number().min(0).max(1).describe("Packing density ratio"),
+      .describe("Segment length [mm]"),
+    density_ratio: z
+      .number()
+      .min(0)
+      .max(100)
+      .describe("Packing density ratio [%]"),
   })
   .refine((d) => d.outer_diameter > d.core_diameter, {
     message: "Outer diameter must be greater than core diameter",
@@ -36,7 +40,7 @@ export const grainSchema = z.object({
   segments: z
     .array(batesSegmentSchema)
     .min(1, "At least one segment is required"),
-  spacing: z.number().min(0).describe("Inter-segment spacing [m]"),
+  spacing: z.number().min(0).describe("Inter-segment spacing [mm]"),
 });
 
 export type Grain = z.infer<typeof grainSchema>;
@@ -47,8 +51,8 @@ export type Grain = z.infer<typeof grainSchema>;
 
 export const nozzleSchema = z
   .object({
-    inlet_diameter: z.number().positive().describe("Inlet diameter [m]"),
-    throat_diameter: z.number().positive().describe("Throat diameter [m]"),
+    inlet_diameter: z.number().positive().describe("Inlet diameter [mm]"),
+    throat_diameter: z.number().positive().describe("Throat diameter [mm]"),
     divergent_angle: z
       .number()
       .positive()
@@ -79,19 +83,19 @@ export const combustionChamberSchema = z
     casing_inner_diameter: z
       .number()
       .positive()
-      .describe("Casing inner diameter [m]"),
+      .describe("Casing inner diameter [mm]"),
     casing_outer_diameter: z
       .number()
       .positive()
-      .describe("Casing outer diameter [m]"),
+      .describe("Casing outer diameter [mm]"),
     internal_length: z
       .number()
       .positive()
-      .describe("Chamber internal length [m]"),
+      .describe("Chamber internal length [mm]"),
     thermal_liner_thickness: z
       .number()
       .min(0)
-      .describe("Thermal liner thickness [m]"),
+      .describe("Thermal liner thickness [mm]"),
   })
   .refine((d) => d.casing_outer_diameter > d.casing_inner_diameter, {
     message: "Outer diameter must be greater than inner diameter",
@@ -111,7 +115,7 @@ export const thrustChamberSchema = z.object({
   nozzle_exit_to_grain_port_distance: z
     .number()
     .min(0)
-    .describe("Nozzle exit to grain port distance [m]"),
+    .describe("Nozzle exit to grain port distance [mm]"),
   center_of_gravity_coordinate: z
     .tuple([z.number(), z.number(), z.number()])
     .nullable()
@@ -148,13 +152,13 @@ export const ibSimParamsSchema = z.object({
   igniter_pressure: z
     .number()
     .positive()
-    .default(1_000_000)
-    .describe("Igniter pressure [Pa]"),
+    .default(1.0)
+    .describe("Igniter pressure [MPa]"),
   external_pressure: z
     .number()
     .positive()
-    .default(101_325)
-    .describe("External pressure [Pa]"),
+    .default(0.101325)
+    .describe("External pressure [MPa]"),
   other_losses: z
     .number()
     .min(0)

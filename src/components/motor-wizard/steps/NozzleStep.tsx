@@ -20,8 +20,8 @@ const fields: {
   name: keyof NonNullable<MotorForm["config"]["thrust_chamber"]["nozzle"]>;
   step?: string;
 }[] = [
-  { label: "Inlet Diameter (m)", name: "inlet_diameter", step: "0.001" },
-  { label: "Throat Diameter (m)", name: "throat_diameter", step: "0.001" },
+  { label: "Inlet Diameter (mm)", name: "inlet_diameter", step: "0.1" },
+  { label: "Throat Diameter (mm)", name: "throat_diameter", step: "0.1" },
   { label: "Divergent Half-angle (°)", name: "divergent_angle", step: "0.1" },
   { label: "Convergent Half-angle (°)", name: "convergent_angle", step: "0.1" },
   { label: "Expansion Ratio (Ae/At)", name: "expansion_ratio", step: "0.01" },

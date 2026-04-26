@@ -21,10 +21,10 @@ interface Props {
 
 const DEFAULT_SEGMENT = {
   type: "bates" as const,
-  outer_diameter: 0.069,
-  core_diameter: 0.025,
-  length: 0.12,
-  density_ratio: 1.0,
+  outer_diameter: 69,
+  core_diameter: 25,
+  length: 120,
+  density_ratio: 100,
 };
 
 export function GrainStep({ control, errors }: Props) {
@@ -73,36 +73,40 @@ export function GrainStep({ control, errors }: Props) {
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 pt-0">
             <SegmentField
-              label="Outer Diameter (m)"
+              label="Outer Diameter (mm)"
               name={
                 `config.grain.segments.${index}.outer_diameter` as FieldPath<MotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.outer_diameter}
               control={control}
+              step="0.1"
             />
             <SegmentField
-              label="Core Diameter (m)"
+              label="Core Diameter (mm)"
               name={
                 `config.grain.segments.${index}.core_diameter` as FieldPath<MotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.core_diameter}
               control={control}
+              step="0.1"
             />
             <SegmentField
-              label="Length (m)"
+              label="Length (mm)"
               name={
                 `config.grain.segments.${index}.length` as FieldPath<MotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.length}
               control={control}
+              step="1"
             />
             <SegmentField
-              label="Density Ratio"
+              label="Density Ratio (%)"
               name={
                 `config.grain.segments.${index}.density_ratio` as FieldPath<MotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.density_ratio}
               control={control}
+              step="1"
             />
           </CardContent>
         </Card>
@@ -110,7 +114,7 @@ export function GrainStep({ control, errors }: Props) {
 
       {/* Spacing */}
       <div className="space-y-1">
-        <Label htmlFor="spacing">Inter-segment Spacing (m)</Label>
+        <Label htmlFor="spacing">Inter-segment Spacing (mm)</Label>
         <Controller
           name="config.grain.spacing"
           control={control}
@@ -118,7 +122,7 @@ export function GrainStep({ control, errors }: Props) {
             <Input
               id="spacing"
               type="number"
-              step="0.001"
+              step="0.1"
               min="0"
               {...field}
               value={typeof field.value === "number" ? field.value : ""}
@@ -146,11 +150,13 @@ function SegmentField({
   name,
   error,
   control,
+  step = "any",
 }: {
   label: string;
   name: FieldPath<MotorForm>;
   error?: { message?: string };
   control: Control<MotorForm>;
+  step?: string;
 }) {
   return (
     <div className="space-y-1">
@@ -164,7 +170,7 @@ function SegmentField({
           <Input
             id={name}
             type="number"
-            step="any"
+            step={step}
             {...field}
             value={typeof field.value === "number" ? field.value : ""}
             onChange={(e) => field.onChange(parseFloat(e.target.value))}
