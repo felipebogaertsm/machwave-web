@@ -199,6 +199,13 @@ export class ApiClient {
     return data;
   }
 
+  async getSimulation(simId: string): Promise<SimulationSummary> {
+    const { data } = await this.http.get<SimulationSummary>(
+      `/simulations/${simId}`,
+    );
+    return data;
+  }
+
   async getSimulationStatus(simId: string): Promise<SimulationStatusRecord> {
     const { data } = await this.http.get<SimulationStatusRecord>(
       `/simulations/${simId}/status`,

@@ -50,7 +50,7 @@ export function PropellantStep({ control, errors }: Props) {
           name="config.propellant_id"
           control={control}
           render={({ field }) => (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {propellants.map((p) => (
                 <label
                   key={p.id}

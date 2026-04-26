@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApiClient, type MotorDetail } from "@/lib/api";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -69,23 +69,21 @@ function MotorDetailContent() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="mx-auto max-w-3xl space-y-6">
+    <AppLayout>
+      <div className="mx-auto max-w-3xl space-y-6">
           {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           {motor && (
             <>
-              <div className="flex items-start justify-between">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h1 className="text-2xl font-bold">{motor.name}</h1>
                   <p className="text-sm text-muted-foreground">
                     {motor.motor_id}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                   <Button onClick={handleSimulate} disabled={simulating}>
                     <Play className="mr-2 h-4 w-4" />
                     {simulating ? "Starting…" : "Run Simulation"}
@@ -121,7 +119,7 @@ function MotorDetailContent() {
                   {motor.config.grain.segments.map((seg, i) => (
                     <div
                       key={i}
-                      className="grid grid-cols-4 gap-4 py-2 text-sm"
+                      className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 text-sm"
                     >
                       <span className="text-muted-foreground">#{i + 1}</span>
                       <span>
@@ -140,7 +138,7 @@ function MotorDetailContent() {
                 <CardHeader>
                   <CardTitle>Nozzle</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-3 gap-3 text-sm">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Throat Ø</p>
                     <p>
@@ -167,8 +165,7 @@ function MotorDetailContent() {
               </Card>
             </>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

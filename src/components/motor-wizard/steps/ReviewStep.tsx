@@ -8,7 +8,7 @@ interface Props {
 
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex items-center justify-between py-1 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 py-1 text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>

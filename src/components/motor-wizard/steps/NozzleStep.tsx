@@ -33,7 +33,7 @@ export function NozzleStep({ control, errors }: Props) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Nozzle</h3>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {fields.map(({ label, name, step }) => (
           <div key={name} className="space-y-1">
             <Label className="text-sm">{label}</Label>

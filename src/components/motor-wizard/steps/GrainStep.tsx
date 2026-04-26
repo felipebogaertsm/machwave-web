@@ -71,7 +71,7 @@ export function GrainStep({ control, errors }: Props) {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 pt-0">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0">
             <SegmentField
               label="Outer Diameter (mm)"
               name={
@@ -127,7 +127,7 @@ export function GrainStep({ control, errors }: Props) {
               {...field}
               value={typeof field.value === "number" ? field.value : ""}
               onChange={(e) => field.onChange(parseFloat(e.target.value))}
-              className="max-w-[180px]"
+              className="w-full max-w-xs"
             />
           )}
         />

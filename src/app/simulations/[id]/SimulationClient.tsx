@@ -2,12 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useApiClient, type SimulationResults } from "@/lib/api";
+import {
+  useApiClient,
+  type MotorDetail,
+  type SimulationResults,
+} from "@/lib/api";
 import { useStatusPoller } from "@/components/simulation/useStatusPoller";
 import { SimulationResultsChart } from "@/components/simulation/SimulationResultsChart";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { paToMpa } from "@/lib/units";
 
@@ -64,6 +69,8 @@ function SimulationContent() {
   const api = useApiClient();
   const { status, error: pollError } = useStatusPoller(simId);
   const [results, setResults] = useState<SimulationResults | null>(null);
+  const [motorDetail, setMotorDetail] = useState<MotorDetail | null>(null);
+  const [copied, setCopied] = useState<"payload" | "error" | null>(null);
   const fetchingRef = useRef(false);
 
   // Fetch results once simulation is done
@@ -79,117 +86,165 @@ function SimulationContent() {
     }
   }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch motor detail once simulation fails
+  useEffect(() => {
+    if (status?.status === "failed" && !motorDetail) {
+      api
+        .getSimulation(simId)
+        .then((sim) => api.getMotor(sim.motor_id))
+        .then(setMotorDetail)
+        .catch(() => {});
+    }
+  }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleCopyPayload() {
+    if (!motorDetail) return;
+    navigator.clipboard.writeText(JSON.stringify(motorDetail.config, null, 2));
+    setCopied("payload");
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  function handleCopyErrorReport() {
+    if (!motorDetail || !status) return;
+    const report = [
+      "## Simulation Failure Report",
+      `Simulation ID: ${simId}`,
+      `Motor ID: ${motorDetail.motor_id}`,
+      `Motor Name: ${motorDetail.name}`,
+      `Status: failed`,
+      `Error: ${status.error ?? "Unknown error"}`,
+      `Timestamp: ${status.updated_at}`,
+      "",
+      "## Motor Configuration (JSON)",
+      JSON.stringify(motorDetail.config, null, 2),
+    ].join("\n");
+    navigator.clipboard.writeText(report);
+    setCopied("error");
+    setTimeout(() => setCopied(null), 2000);
+  }
+
   return (
-    <div className="flex min-h-screen">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="mx-auto max-w-5xl space-y-6">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Simulation</h1>
-              <p className="font-mono text-xs text-muted-foreground">{simId}</p>
-            </div>
-            {status && (
-              <Badge variant={statusVariant(status.status)} className="text-sm">
-                {status.status}
-              </Badge>
-            )}
+    <AppLayout>
+      <div className="mx-auto max-w-5xl space-y-6">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Simulation</h1>
+            <p className="font-mono text-xs text-muted-foreground">{simId}</p>
           </div>
-
-          {pollError && (
-            <p className="text-sm text-destructive">
-              Polling error: {pollError}
-            </p>
-          )}
-
-          {/* Running indicator */}
-          {(status?.status === "pending" || status?.status === "running") && (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-muted-foreground">
-                  Simulation is {status.status}… results will appear
-                  automatically.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Error */}
-          {status?.status === "failed" && (
-            <Card className="border-destructive">
-              <CardHeader>
-                <CardTitle className="text-destructive">
-                  Simulation Failed
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
-                  {status.error ?? "Unknown error"}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Results */}
-          {results && (
-            <>
-              {/* Scalar metrics */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <MetricCard
-                  label="Total Impulse"
-                  value={results.total_impulse}
-                  unit="N·s"
-                />
-                <MetricCard
-                  label="Specific Impulse"
-                  value={results.specific_impulse}
-                  unit="s"
-                />
-                <MetricCard
-                  label="Max Thrust"
-                  value={results.max_thrust}
-                  unit="N"
-                />
-                <MetricCard
-                  label="Avg Thrust"
-                  value={results.avg_thrust}
-                  unit="N"
-                />
-                <MetricCard
-                  label="Burn Time"
-                  value={results.thrust_time}
-                  unit="s"
-                />
-                <MetricCard
-                  label="Max Chamber P"
-                  value={paToMpa(results.max_chamber_pressure)}
-                  unit="MPa"
-                />
-                <Card className="sm:col-span-2">
-                  <CardContent className="pt-4">
-                    <p className="text-xs text-muted-foreground">
-                      Burn Profile
-                    </p>
-                    <Badge className="mt-1">{results.burn_profile}</Badge>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Time Series</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SimulationResultsChart results={results} />
-                </CardContent>
-              </Card>
-            </>
+          {status && (
+            <Badge variant={statusVariant(status.status)} className="text-sm">
+              {status.status}
+            </Badge>
           )}
         </div>
-      </main>
-    </div>
+
+        {pollError && (
+          <p className="text-sm text-destructive">Polling error: {pollError}</p>
+        )}
+
+        {/* Running indicator */}
+        {(status?.status === "pending" || status?.status === "running") && (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-muted-foreground">
+                Simulation is {status.status}… results will appear
+                automatically.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error */}
+        {status?.status === "failed" && (
+          <Card className="border-destructive">
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <CardTitle className="text-destructive">
+                Simulation Failed
+              </CardTitle>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!motorDetail}
+                  onClick={handleCopyPayload}
+                >
+                  {copied === "payload" ? "Copied!" : "Copy Motor Payload"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!motorDetail}
+                  onClick={handleCopyErrorReport}
+                >
+                  {copied === "error" ? "Copied!" : "Copy Error Report"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {status.error ?? "Unknown error"}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Results */}
+        {results && (
+          <>
+            {/* Scalar metrics */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <MetricCard
+                label="Total Impulse"
+                value={results.total_impulse}
+                unit="N·s"
+              />
+              <MetricCard
+                label="Specific Impulse"
+                value={results.specific_impulse}
+                unit="s"
+              />
+              <MetricCard
+                label="Max Thrust"
+                value={results.max_thrust}
+                unit="N"
+              />
+              <MetricCard
+                label="Avg Thrust"
+                value={results.avg_thrust}
+                unit="N"
+              />
+              <MetricCard
+                label="Burn Time"
+                value={results.thrust_time}
+                unit="s"
+              />
+              <MetricCard
+                label="Max Chamber P"
+                value={paToMpa(results.max_chamber_pressure)}
+                unit="MPa"
+              />
+              <Card className="sm:col-span-2">
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">Burn Profile</p>
+                  <Badge className="mt-1">{results.burn_profile}</Badge>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Time Series</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SimulationResultsChart results={results} />
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+    </AppLayout>
   );
 }

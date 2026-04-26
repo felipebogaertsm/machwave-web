@@ -8,7 +8,7 @@ import {
   type SimulationSummary,
 } from "@/lib/api";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,10 +59,8 @@ function DashboardContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex min-h-screen">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto p-8">
-        <div className="mx-auto max-w-5xl space-y-8">
+    <AppLayout>
+      <div className="mx-auto max-w-5xl space-y-8">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <Button asChild>
@@ -152,8 +150,7 @@ function DashboardContent() {
               ))}
             </div>
           </section>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

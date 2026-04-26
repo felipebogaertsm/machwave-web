@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import type { SimulationResults } from "@/lib/api";
 import { paToMpa } from "@/lib/units";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Props {
   results: SimulationResults;
@@ -51,23 +52,18 @@ export function SimulationResultsChart({ results }: Props) {
   return (
     <div className="space-y-4">
       {/* Tab switcher */}
-      <div className="flex gap-1 rounded-lg border p-1 w-fit">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
+        <TabsList className="h-auto flex-wrap">
+          {TABS.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      <ResponsiveContainer width="100%" height={380}>
+      <div className="h-[280px] sm:h-[380px]">
+        <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
           margin={{ top: 8, right: 24, left: 0, bottom: 8 }}
@@ -221,6 +217,7 @@ export function SimulationResultsChart({ results }: Props) {
           <Legend wrapperStyle={{ fontSize: 12 }} />
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }
