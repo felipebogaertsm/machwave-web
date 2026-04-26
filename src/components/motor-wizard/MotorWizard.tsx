@@ -25,17 +25,10 @@ const DEFAULT_VALUES: MotorForm = {
       segments: [
         {
           type: "bates",
-          outer_diameter: 69,
-          core_diameter: 25,
-          length: 120,
-          density_ratio: 100,
-        },
-        {
-          type: "bates",
-          outer_diameter: 69,
-          core_diameter: 25,
-          length: 120,
-          density_ratio: 100,
+          outer_diameter: NaN,
+          core_diameter: NaN,
+          length: NaN,
+          density_ratio: NaN,
         },
       ],
       spacing: 3,

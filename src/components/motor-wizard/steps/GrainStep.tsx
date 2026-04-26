@@ -2,6 +2,7 @@
 
 import {
   useFieldArray,
+  useWatch,
   Controller,
   type Control,
   type FieldErrors,
@@ -12,20 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Info, Plus, Trash2 } from "lucide-react";
 
 interface Props {
   control: Control<MotorForm>;
   errors: FieldErrors<MotorForm>;
 }
-
-const DEFAULT_SEGMENT = {
-  type: "bates" as const,
-  outer_diameter: 69,
-  core_diameter: 25,
-  length: 120,
-  density_ratio: 100,
-};
 
 export function GrainStep({ control, errors }: Props) {
   const { fields, append, remove } = useFieldArray({
@@ -33,19 +26,15 @@ export function GrainStep({ control, errors }: Props) {
     name: "config.grain.segments",
   });
 
+  const segments = useWatch({ control, name: "config.grain.segments" });
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Grain Segments</h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => append(DEFAULT_SEGMENT)}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Segment
-        </Button>
+      <h3 className="text-lg font-semibold">Grain Segments</h3>
+
+      <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+        <Info className="h-4 w-4 mt-0.5 shrink-0" />
+        <p>Segment 1 is the closest to the nozzle.</p>
       </div>
 
       {fields.length === 0 && (
@@ -111,6 +100,29 @@ export function GrainStep({ control, errors }: Props) {
           </CardContent>
         </Card>
       ))}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          const last = segments?.[segments.length - 1];
+          append(
+            last
+              ? { ...last }
+              : {
+                  type: "bates",
+                  outer_diameter: NaN,
+                  core_diameter: NaN,
+                  length: NaN,
+                  density_ratio: NaN,
+                },
+          );
+        }}
+      >
+        <Plus className="h-4 w-4 mr-1" />
+        Add Segment
+      </Button>
 
       {/* Spacing */}
       <div className="space-y-1">
