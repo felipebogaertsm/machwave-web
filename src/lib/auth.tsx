@@ -56,13 +56,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithPopup(auth, provider);
   }, []);
 
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  }, []);
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      await signInWithEmailAndPassword(auth, email, password);
+    },
+    [],
+  );
 
-  const registerWithEmail = useCallback(async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
-  }, []);
+  const registerWithEmail = useCallback(
+    async (email: string, password: string) => {
+      await createUserWithEmailAndPassword(auth, email, password);
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     await signOut(auth);

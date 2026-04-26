@@ -14,16 +14,16 @@ The app is a fully static export (`output: "export"`) served from GCS. Authentic
 
 ## Main components
 
-| Path | Purpose |
-|---|---|
-| `src/lib/firebase.ts` | Firebase app init |
-| `src/lib/auth.ts` | AuthContext + `useAuth` hook |
-| `src/lib/api.ts` | Axios client with token interceptor + typed API calls |
-| `src/components/motor-wizard/` | Multi-step motor configuration form |
-| `src/components/simulation/` | Status poller + results chart |
-| `src/app/dashboard/` | Motor and simulation list |
-| `src/app/motors/[id]/` | Motor detail + trigger simulation |
-| `src/app/simulations/[id]/` | Live status + results view |
+| Path                           | Purpose                                               |
+| ------------------------------ | ----------------------------------------------------- |
+| `src/lib/firebase.ts`          | Firebase app init                                     |
+| `src/lib/auth.ts`              | AuthContext + `useAuth` hook                          |
+| `src/lib/api.ts`               | Axios client with token interceptor + typed API calls |
+| `src/components/motor-wizard/` | Multi-step motor configuration form                   |
+| `src/components/simulation/`   | Status poller + results chart                         |
+| `src/app/dashboard/`           | Motor and simulation list                             |
+| `src/app/motors/[id]/`         | Motor detail + trigger simulation                     |
+| `src/app/simulations/[id]/`    | Live status + results view                            |
 
 ## Local development
 
@@ -73,12 +73,12 @@ make clean       # rm -rf out/ .next/
 
 ## Environment variables
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web API key |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket |
+| Variable                                   | Description                  |
+| ------------------------------------------ | ---------------------------- |
+| `NEXT_PUBLIC_FIREBASE_API_KEY`             | Firebase web API key         |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`         | Firebase auth domain         |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`          | Firebase project ID          |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`      | Firebase storage bucket      |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID |
-| `NEXT_PUBLIC_API_URL` | machwave-api base URL |
+| `NEXT_PUBLIC_FIREBASE_APP_ID`              | Firebase app ID              |
+| `NEXT_PUBLIC_API_URL`                      | machwave-api base URL        |

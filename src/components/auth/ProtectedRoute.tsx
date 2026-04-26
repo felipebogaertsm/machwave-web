@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 /**
@@ -22,7 +23,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <span className="text-muted-foreground text-sm">Loading…</span>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

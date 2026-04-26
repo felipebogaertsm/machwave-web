@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Rocket } from "lucide-react";
+import { Rocket, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const { signInWithGoogle, signInWithEmail, registerWithEmail } = useAuth();
@@ -116,13 +116,13 @@ export default function LoginPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading
-                ? mode === "login"
-                  ? "Signing in…"
-                  : "Creating account…"
-                : mode === "login"
-                  ? "Sign in"
-                  : "Create account"}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : mode === "login" ? (
+                "Sign in"
+              ) : (
+                "Create account"
+              )}
             </Button>
           </form>
 

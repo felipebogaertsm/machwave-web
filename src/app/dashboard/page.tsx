@@ -18,7 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Flame, Activity } from "lucide-react";
+import { Plus, Flame, Activity, Loader2 } from "lucide-react";
 
 function statusVariant(
   status: SimulationSummary["status"],
@@ -71,7 +71,9 @@ function DashboardContent() {
           </Button>
         </div>
 
-        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {loading && (
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        )}
 
         {/* Motors */}
         <section className="space-y-3">
