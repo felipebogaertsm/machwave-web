@@ -64,159 +64,165 @@ export function SimulationResultsChart({ results }: Props) {
 
       <div className="h-[280px] sm:h-[380px]">
         <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
-          data={data}
-          margin={{ top: 8, right: 24, left: 0, bottom: 8 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-          <XAxis
-            dataKey="t"
-            label={{
-              value: "Time (s)",
-              position: "insideBottomRight",
-              offset: -8,
-            }}
-            tick={{ fontSize: 11 }}
-          />
+          <ComposedChart
+            data={data}
+            margin={{ top: 8, right: 24, left: 0, bottom: 8 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis
+              dataKey="t"
+              label={{
+                value: "Time (s)",
+                position: "insideBottomRight",
+                offset: -8,
+              }}
+              tick={{ fontSize: 11 }}
+            />
 
-          {activeTab === "thrust_pressure" && (
-            <>
-              <YAxis
-                yAxisId="thrust"
-                orientation="left"
-                label={{
-                  value: "Thrust (N)",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: 12,
-                }}
-                tick={{ fontSize: 11 }}
-              />
-              <YAxis
-                yAxisId="pressure"
-                orientation="right"
-                label={{
-                  value: "Chamber P (MPa)",
-                  angle: 90,
-                  position: "insideRight",
-                  offset: 12,
-                }}
-                tick={{ fontSize: 11 }}
-              />
-              <Line
-                yAxisId="thrust"
-                type="monotone"
-                dataKey="thrust"
-                stroke="#f97316"
-                dot={false}
-                name="Thrust (N)"
-                strokeWidth={2}
-              />
-              <Line
-                yAxisId="pressure"
-                type="monotone"
-                dataKey="P_0_MPa"
-                stroke="#3b82f6"
-                dot={false}
-                name="P₀ (MPa)"
-                strokeWidth={2}
-              />
-            </>
-          )}
-
-          {activeTab === "efficiency" && (
-            <>
-              <YAxis
-                yAxisId="pct"
-                domain={[0, 105]}
-                label={{
-                  value: "Efficiency (%)",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: 12,
-                }}
-                tick={{ fontSize: 11 }}
-              />
-              {[
-                { key: "nozzle_efficiency", label: "Nozzle", color: "#a855f7" },
-                {
-                  key: "overall_efficiency",
-                  label: "Overall",
-                  color: "#22c55e",
-                },
-                { key: "eta_div", label: "η_div", color: "#eab308" },
-                { key: "eta_kin", label: "η_kin", color: "#ec4899" },
-                { key: "eta_bl", label: "η_bl", color: "#06b6d4" },
-                { key: "eta_2p", label: "η_2p", color: "#f97316" },
-              ].map(({ key, label, color }) => (
-                <Line
-                  key={key}
-                  yAxisId="pct"
-                  type="monotone"
-                  dataKey={key}
-                  stroke={color}
-                  dot={false}
-                  name={`${label} (%)`}
-                  strokeWidth={1.5}
+            {activeTab === "thrust_pressure" && (
+              <>
+                <YAxis
+                  yAxisId="thrust"
+                  orientation="left"
+                  label={{
+                    value: "Thrust (N)",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 12,
+                  }}
+                  tick={{ fontSize: 11 }}
                 />
-              ))}
-            </>
-          )}
+                <YAxis
+                  yAxisId="pressure"
+                  orientation="right"
+                  label={{
+                    value: "Chamber P (MPa)",
+                    angle: 90,
+                    position: "insideRight",
+                    offset: 12,
+                  }}
+                  tick={{ fontSize: 11 }}
+                />
+                <Line
+                  yAxisId="thrust"
+                  type="monotone"
+                  dataKey="thrust"
+                  stroke="#f97316"
+                  dot={false}
+                  name="Thrust (N)"
+                  strokeWidth={2}
+                />
+                <Line
+                  yAxisId="pressure"
+                  type="monotone"
+                  dataKey="P_0_MPa"
+                  stroke="#3b82f6"
+                  dot={false}
+                  name="P₀ (MPa)"
+                  strokeWidth={2}
+                />
+              </>
+            )}
 
-          {activeTab === "burn" && (
-            <>
-              <YAxis
-                yAxisId="area"
-                orientation="left"
-                label={{
-                  value: "Burn Area (cm²)",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: 12,
-                }}
-                tick={{ fontSize: 11 }}
-              />
-              <YAxis
-                yAxisId="rate"
-                orientation="right"
-                label={{
-                  value: "Burn Rate (mm/s)",
-                  angle: 90,
-                  position: "insideRight",
-                  offset: 12,
-                }}
-                tick={{ fontSize: 11 }}
-              />
-              <Line
-                yAxisId="area"
-                type="monotone"
-                dataKey="burn_area"
-                stroke="#f97316"
-                dot={false}
-                name="Burn Area (cm²)"
-                strokeWidth={2}
-              />
-              <Line
-                yAxisId="rate"
-                type="monotone"
-                dataKey="burn_rate"
-                stroke="#3b82f6"
-                dot={false}
-                name="Burn Rate (mm/s)"
-                strokeWidth={2}
-              />
-            </>
-          )}
+            {activeTab === "efficiency" && (
+              <>
+                <YAxis
+                  yAxisId="pct"
+                  domain={[0, 105]}
+                  label={{
+                    value: "Efficiency (%)",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 12,
+                  }}
+                  tick={{ fontSize: 11 }}
+                />
+                {[
+                  {
+                    key: "nozzle_efficiency",
+                    label: "Nozzle",
+                    color: "#a855f7",
+                  },
+                  {
+                    key: "overall_efficiency",
+                    label: "Overall",
+                    color: "#22c55e",
+                  },
+                  { key: "eta_div", label: "η_div", color: "#eab308" },
+                  { key: "eta_kin", label: "η_kin", color: "#ec4899" },
+                  { key: "eta_bl", label: "η_bl", color: "#06b6d4" },
+                  { key: "eta_2p", label: "η_2p", color: "#f97316" },
+                ].map(({ key, label, color }) => (
+                  <Line
+                    key={key}
+                    yAxisId="pct"
+                    type="monotone"
+                    dataKey={key}
+                    stroke={color}
+                    dot={false}
+                    name={`${label} (%)`}
+                    strokeWidth={1.5}
+                  />
+                ))}
+              </>
+            )}
 
-          <Tooltip
-            contentStyle={{ fontSize: 12 }}
-            formatter={(value) =>
-              typeof value === "number" ? value.toFixed(3) : String(value ?? "")
-            }
-          />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-        </ComposedChart>
-      </ResponsiveContainer>
+            {activeTab === "burn" && (
+              <>
+                <YAxis
+                  yAxisId="area"
+                  orientation="left"
+                  label={{
+                    value: "Burn Area (cm²)",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 12,
+                  }}
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis
+                  yAxisId="rate"
+                  orientation="right"
+                  label={{
+                    value: "Burn Rate (mm/s)",
+                    angle: 90,
+                    position: "insideRight",
+                    offset: 12,
+                  }}
+                  tick={{ fontSize: 11 }}
+                />
+                <Line
+                  yAxisId="area"
+                  type="monotone"
+                  dataKey="burn_area"
+                  stroke="#f97316"
+                  dot={false}
+                  name="Burn Area (cm²)"
+                  strokeWidth={2}
+                />
+                <Line
+                  yAxisId="rate"
+                  type="monotone"
+                  dataKey="burn_rate"
+                  stroke="#3b82f6"
+                  dot={false}
+                  name="Burn Rate (mm/s)"
+                  strokeWidth={2}
+                />
+              </>
+            )}
+
+            <Tooltip
+              contentStyle={{ fontSize: 12 }}
+              formatter={(value) =>
+                typeof value === "number"
+                  ? value.toFixed(3)
+                  : String(value ?? "")
+              }
+            />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

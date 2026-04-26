@@ -71,100 +71,97 @@ function MotorDetailContent() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-3xl space-y-6">
-          {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-          {motor && (
-            <>
-                <div className="flex flex-wrap items-start justify-between gap-3">
+        {motor && (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">{motor.name}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {motor.motor_id}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleSimulate} disabled={simulating}>
+                  <Play className="mr-2 h-4 w-4" />
+                  {simulating ? "Starting…" : "Run Simulation"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Propellant</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Badge>{motor.config.propellant_id}</Badge>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Grain</CardTitle>
+                <CardDescription>
+                  {motor.config.grain.segments.length} segments
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="divide-y">
+                {motor.config.grain.segments.map((seg, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 text-sm"
+                  >
+                    <span className="text-muted-foreground">#{i + 1}</span>
+                    <span>OD: {(seg.outer_diameter * 1000).toFixed(1)} mm</span>
+                    <span>
+                      Core: {(seg.core_diameter * 1000).toFixed(1)} mm
+                    </span>
+                    <span>L: {(seg.length * 1000).toFixed(1)} mm</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Nozzle</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 <div>
-                  <h1 className="text-2xl font-bold">{motor.name}</h1>
-                  <p className="text-sm text-muted-foreground">
-                    {motor.motor_id}
+                  <p className="text-muted-foreground text-xs">Throat Ø</p>
+                  <p>
+                    {(
+                      motor.config.thrust_chamber.nozzle.throat_diameter * 1000
+                    ).toFixed(1)}{" "}
+                    mm
                   </p>
                 </div>
-                  <div className="flex flex-wrap gap-2">
-                  <Button onClick={handleSimulate} disabled={simulating}>
-                    <Play className="mr-2 h-4 w-4" />
-                    {simulating ? "Starting…" : "Run Simulation"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div>
+                  <p className="text-muted-foreground text-xs">
+                    Expansion Ratio
+                  </p>
+                  <p>{motor.config.thrust_chamber.nozzle.expansion_ratio}</p>
                 </div>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Propellant</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Badge>{motor.config.propellant_id}</Badge>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Grain</CardTitle>
-                  <CardDescription>
-                    {motor.config.grain.segments.length} segments
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="divide-y">
-                  {motor.config.grain.segments.map((seg, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 text-sm"
-                    >
-                      <span className="text-muted-foreground">#{i + 1}</span>
-                      <span>
-                        OD: {(seg.outer_diameter * 1000).toFixed(1)} mm
-                      </span>
-                      <span>
-                        Core: {(seg.core_diameter * 1000).toFixed(1)} mm
-                      </span>
-                      <span>L: {(seg.length * 1000).toFixed(1)} mm</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Nozzle</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs">Throat Ø</p>
-                    <p>
-                      {(
-                        motor.config.thrust_chamber.nozzle.throat_diameter *
-                        1000
-                      ).toFixed(1)}{" "}
-                      mm
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">
-                      Expansion Ratio
-                    </p>
-                    <p>{motor.config.thrust_chamber.nozzle.expansion_ratio}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">
-                      Divergent Angle
-                    </p>
-                    <p>{motor.config.thrust_chamber.nozzle.divergent_angle}°</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                <div>
+                  <p className="text-muted-foreground text-xs">
+                    Divergent Angle
+                  </p>
+                  <p>{motor.config.thrust_chamber.nozzle.divergent_angle}°</p>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </AppLayout>
   );

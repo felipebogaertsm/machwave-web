@@ -95,9 +95,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-4 md:p-8">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
   );

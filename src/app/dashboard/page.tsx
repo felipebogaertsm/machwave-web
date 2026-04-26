@@ -61,95 +61,90 @@ function DashboardContent() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-5xl space-y-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <Button asChild>
-              <Link href="/motors/new">
-                <Plus className="mr-2 h-4 w-4" />
-                New Motor
-              </Link>
-            </Button>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <Button asChild>
+            <Link href="/motors/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Motor
+            </Link>
+          </Button>
+        </div>
+
+        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+
+        {/* Motors */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-500" />
+            <h2 className="text-lg font-semibold">Motors ({motors.length})</h2>
           </div>
+          {motors.length === 0 && !loading && (
+            <p className="text-sm text-muted-foreground">
+              No motors yet.{" "}
+              <Link
+                href="/motors/new"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Create your first motor.
+              </Link>
+            </p>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {motors.map((motor) => (
+              <Link key={motor.motor_id} href={`/motors/${motor.motor_id}`}>
+                <Card className="transition-shadow hover:shadow-md cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{motor.name}</CardTitle>
+                    <CardDescription className="text-xs">
+                      Updated {new Date(motor.updated_at).toLocaleDateString()}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-          {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-
-          {/* Motors */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Flame className="h-5 w-5 text-orange-500" />
-              <h2 className="text-lg font-semibold">
-                Motors ({motors.length})
-              </h2>
-            </div>
-            {motors.length === 0 && !loading && (
-              <p className="text-sm text-muted-foreground">
-                No motors yet.{" "}
-                <Link
-                  href="/motors/new"
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  Create your first motor.
-                </Link>
-              </p>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {motors.map((motor) => (
-                <Link key={motor.motor_id} href={`/motors/${motor.motor_id}`}>
-                  <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{motor.name}</CardTitle>
-                      <CardDescription className="text-xs">
-                        Updated{" "}
-                        {new Date(motor.updated_at).toLocaleDateString()}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          {/* Simulations */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-blue-500" />
-              <h2 className="text-lg font-semibold">
-                Recent Simulations ({sims.length})
-              </h2>
-            </div>
-            {sims.length === 0 && !loading && (
-              <p className="text-sm text-muted-foreground">
-                No simulations yet.
-              </p>
-            )}
-            <div className="space-y-2">
-              {sims.slice(0, 10).map((sim) => (
-                <Link
-                  key={sim.simulation_id}
-                  href={`/simulations/${sim.simulation_id}`}
-                >
-                  <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                    <CardContent className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="text-sm font-medium">
-                          Simulation{" "}
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {sim.simulation_id.slice(0, 8)}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(sim.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                      <Badge variant={statusVariant(sim.status)}>
-                        {sim.status}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </section>
+        {/* Simulations */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-blue-500" />
+            <h2 className="text-lg font-semibold">
+              Recent Simulations ({sims.length})
+            </h2>
+          </div>
+          {sims.length === 0 && !loading && (
+            <p className="text-sm text-muted-foreground">No simulations yet.</p>
+          )}
+          <div className="space-y-2">
+            {sims.slice(0, 10).map((sim) => (
+              <Link
+                key={sim.simulation_id}
+                href={`/simulations/${sim.simulation_id}`}
+              >
+                <Card className="transition-shadow hover:shadow-md cursor-pointer">
+                  <CardContent className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium">
+                        Simulation{" "}
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {sim.simulation_id.slice(0, 8)}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(sim.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant(sim.status)}>
+                      {sim.status}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
     </AppLayout>
   );
