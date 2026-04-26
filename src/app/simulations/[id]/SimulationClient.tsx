@@ -97,14 +97,33 @@ function SimulationContent() {
     }
   }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleCopyPayload() {
-    if (!motorDetail) return;
-    navigator.clipboard.writeText(JSON.stringify(motorDetail.config, null, 2));
-    setCopied("payload");
-    setTimeout(() => setCopied(null), 2000);
+  async function copyToClipboard(text: string): Promise<void> {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
   }
 
-  function handleCopyErrorReport() {
+  async function handleCopyPayload() {
+    if (!motorDetail) return;
+    try {
+      await copyToClipboard(JSON.stringify(motorDetail.config, null, 2));
+      setCopied("payload");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  }
+
+  async function handleCopyErrorReport() {
     if (!motorDetail || !status) return;
     const report = [
       "## Simulation Failure Report",
@@ -118,9 +137,13 @@ function SimulationContent() {
       "## Motor Configuration (JSON)",
       JSON.stringify(motorDetail.config, null, 2),
     ].join("\n");
-    navigator.clipboard.writeText(report);
-    setCopied("error");
-    setTimeout(() => setCopied(null), 2000);
+    try {
+      await copyToClipboard(report);
+      setCopied("error");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // clipboard unavailable
+    }
   }
 
   return (
