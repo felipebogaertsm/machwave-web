@@ -11,14 +11,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Plus, Flame, Activity } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus, Flame, Activity, ChevronRight } from "lucide-react";
 
 function statusVariant(
   status: SimulationSummary["status"],
@@ -99,27 +93,37 @@ function DashboardContent() {
             {loading
               ? Array.from({ length: 3 }).map((_, i) => (
                   <Card key={i}>
-                    <CardHeader className="pb-2 space-y-2">
-                      <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
-                      <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
-                    </CardHeader>
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <div className="h-9 w-9 shrink-0 rounded-md bg-muted animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
+                        <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
+                      </div>
+                    </CardContent>
                   </Card>
                 ))
               : motors.map((motor) => (
                   <Link
                     key={motor.motor_id}
                     href={`/motors/${motor.motor_id}`}
+                    className="block"
                   >
-                    <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">
-                          {motor.name}
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                          Updated{" "}
-                          {new Date(motor.updated_at).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
+                    <Card className="group transition-colors hover:border-primary/50 hover:bg-muted/40 cursor-pointer">
+                      <CardContent className="flex items-center gap-3 p-4">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-orange-500/10 text-orange-500">
+                          <Flame className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {motor.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Updated{" "}
+                            {new Date(motor.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </CardContent>
                     </Card>
                   </Link>
                 ))}
