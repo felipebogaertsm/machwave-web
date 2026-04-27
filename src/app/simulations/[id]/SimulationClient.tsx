@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   useApiClient,
   type MotorDetail,
@@ -14,6 +14,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trash2 } from "lucide-react";
 import { paToMpa } from "@/lib/units";
 
 function statusVariant(
@@ -65,6 +66,7 @@ export default function SimulationPage() {
 
 function SimulationContent() {
   const params = useParams();
+  const router = useRouter();
   const simId = params.id as string;
   const api = useApiClient();
   const { status, error: pollError } = useStatusPoller(simId);
@@ -73,6 +75,8 @@ function SimulationContent() {
   const [motorDetailError, setMotorDetailError] = useState(false);
   const [payloadCopied, setPayloadCopied] = useState(false);
   const [reportCopied, setReportCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const fetchingRef = useRef(false);
 
   // Fetch results once simulation is done
@@ -129,6 +133,18 @@ function SimulationContent() {
     setTimeout(() => setPayloadCopied(false), 2000);
   }
 
+  async function handleDelete() {
+    if (!confirm("Delete this simulation? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await api.deleteSimulation(simId);
+      router.replace("/dashboard");
+    } catch {
+      setDeleteError("Failed to delete simulation");
+      setDeleting(false);
+    }
+  }
+
   async function handleCopyErrorReport() {
     if (!motorDetail || !status) return;
     const lines = [
@@ -152,20 +168,33 @@ function SimulationContent() {
     <AppLayout>
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">simulation</h1>
+            <h1 className="text-2xl font-bold">Simulation</h1>
             <p className="font-mono text-xs text-muted-foreground">{simId}</p>
           </div>
-          {status && (
-            <Badge variant={statusVariant(status.status)} className="text-sm">
-              {status.status}
-            </Badge>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {status && (
+              <Badge variant={statusVariant(status.status)} className="text-sm">
+                {status.status}
+              </Badge>
+            )}
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {pollError && (
           <p className="text-sm text-destructive">Polling error: {pollError}</p>
+        )}
+        {deleteError && (
+          <p className="text-sm text-destructive">{deleteError}</p>
         )}
 
         {/* Running indicator */}

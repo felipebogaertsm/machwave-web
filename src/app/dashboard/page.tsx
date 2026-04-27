@@ -150,8 +150,9 @@ function DashboardContent() {
             {loading &&
               Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i}>
-                  <CardContent className="flex items-center justify-between py-3">
-                    <div className="space-y-2">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="h-9 w-9 shrink-0 rounded-md bg-muted animate-pulse" />
+                    <div className="flex-1 space-y-2">
                       <div className="h-4 w-40 rounded bg-muted animate-pulse" />
                       <div className="h-3 w-32 rounded bg-muted animate-pulse" />
                     </div>
@@ -161,30 +162,34 @@ function DashboardContent() {
               ))}
             {!loading &&
               sims.slice(0, 10).map((sim) => (
-              <Link
-                key={sim.simulation_id}
-                href={`/simulations/${sim.simulation_id}`}
-              >
-                <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                  <CardContent className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium">
-                        Simulation{" "}
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {sim.simulation_id.slice(0, 8)}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(sim.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge variant={statusVariant(sim.status)}>
-                      {sim.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                <Link
+                  key={sim.simulation_id}
+                  href={`/simulations/${sim.simulation_id}`}
+                  className="block"
+                >
+                  <Card className="transition-colors hover:border-primary/50 hover:bg-muted/40 cursor-pointer">
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-500">
+                        <Activity className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          Simulation{" "}
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {sim.simulation_id.slice(0, 8)}
+                          </span>
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {new Date(sim.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge variant={statusVariant(sim.status)}>
+                        {sim.status}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
           </div>
         </section>
       </div>

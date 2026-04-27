@@ -79,7 +79,7 @@ function MotorDetailContent() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">{motor.name}</h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   {motor.motor_id}
                 </p>
               </div>
