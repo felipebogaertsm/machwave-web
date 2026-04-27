@@ -12,6 +12,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { GithubStatusCard } from "@/components/dashboard/GithubStatusCard";
 import { Plus, Flame, Activity, ChevronRight } from "lucide-react";
 
 function statusVariant(
@@ -191,6 +193,15 @@ function DashboardContent() {
                 </Link>
               ))}
           </div>
+        </section>
+
+        <Separator className="my-4" />
+
+        <section className="space-y-3 pt-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Project
+          </h2>
+          <GithubStatusCard />
         </section>
       </div>
     </AppLayout>

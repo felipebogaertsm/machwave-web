@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookOpen,
   Flame,
+  Info,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -20,9 +22,23 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 const navItemClass =
   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  external?: boolean;
+};
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/motors/new", label: "New Motor", icon: Flame },
+  {
+    href: "https://felipebogaertsm.github.io/machwave/",
+    label: "Documentation",
+    icon: BookOpen,
+    external: true,
+  },
+  { href: "/about", label: "About", icon: Info },
 ];
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
@@ -39,22 +55,40 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
       <Separator />
       <nav className="flex-1 space-y-1 p-3">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavClick}
-            className={cn(
-              navItemClass,
-              pathname === href
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        ))}
+        {navItems.map(({ href, label, icon: Icon, external }) => {
+          const className = cn(
+            navItemClass,
+            !external && pathname === href
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground",
+          );
+          if (external) {
+            return (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onNavClick}
+                className={className}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </a>
+            );
+          }
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavClick}
+              className={className}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
       <Separator />
       <div className="p-3 space-y-1">
