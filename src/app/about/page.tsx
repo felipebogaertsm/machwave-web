@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { GithubStatusCard } from "@/components/dashboard/GithubStatusCard";
 
 const DOCS_URL = "https://felipebogaertsm.github.io/machwave/";
 const AUTHOR_NAME = "Felipe Bogaerts de Mattos";
@@ -45,6 +46,17 @@ function AboutPage() {
             </dl>
           </CardContent>
         </Card>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Repositories
+          </h2>
+          <div className="space-y-2">
+            <GithubStatusCard owner="felipebogaertsm" name="machwave" />
+            <GithubStatusCard owner="felipebogaertsm" name="machwave-api" />
+            <GithubStatusCard owner="felipebogaertsm" name="machwave-web" />
+          </div>
+        </section>
 
         <Card>
           <CardHeader>

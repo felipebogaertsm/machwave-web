@@ -4,17 +4,16 @@ import { useEffect, useState } from "react";
 import { Star, GitFork, Tag, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-const REPO_OWNER = "felipebogaertsm";
-const REPO_NAME = "machwave";
-const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
-const API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
-const RELEASE_URL = `${API_URL}/releases/latest`;
-
 type RepoData = {
   stars: number;
   forks: number;
   pushedAt: string;
   latestTag: string | null;
+};
+
+type GithubStatusCardProps = {
+  owner: string;
+  name: string;
 };
 
 function formatRelative(iso: string): string {
@@ -32,7 +31,11 @@ function formatRelative(iso: string): string {
   return `${Math.round(mo / 12)}y ago`;
 }
 
-export function GithubStatusCard() {
+export function GithubStatusCard({ owner, name }: GithubStatusCardProps) {
+  const repoUrl = `https://github.com/${owner}/${name}`;
+  const apiUrl = `https://api.github.com/repos/${owner}/${name}`;
+  const releaseUrl = `${apiUrl}/releases/latest`;
+
   const [data, setData] = useState<RepoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -40,8 +43,8 @@ export function GithubStatusCard() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch(API_URL).then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
-      fetch(RELEASE_URL).then((r) =>
+      fetch(apiUrl).then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
+      fetch(releaseUrl).then((r) =>
         r.ok ? r.json() : r.status === 404 ? null : Promise.reject(r.status),
       ),
     ])
@@ -63,11 +66,11 @@ export function GithubStatusCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [apiUrl, releaseUrl]);
 
   return (
     <a
-      href={REPO_URL}
+      href={repoUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="block"
@@ -80,7 +83,7 @@ export function GithubStatusCard() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium">
-                {REPO_OWNER}/{REPO_NAME}
+                {owner}/{name}
               </p>
               <p className="text-xs text-muted-foreground">GitHub repository</p>
             </div>
