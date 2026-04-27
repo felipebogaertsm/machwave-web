@@ -12,6 +12,7 @@ import {
   Menu,
   Rocket,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -43,7 +44,7 @@ const navItems: NavItem[] = [
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
 
   return (
     <>
@@ -95,6 +96,21 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         <p className="truncate px-3 py-1 text-xs text-muted-foreground">
           {user?.email}
         </p>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={onNavClick}
+            className={cn(
+              navItemClass,
+              pathname === "/admin"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Admin
+          </Link>
+        )}
         <Link
           href="/settings"
           onClick={onNavClick}

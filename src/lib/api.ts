@@ -95,6 +95,11 @@ export interface SimulationStatusRecord {
   updated_at: string;
 }
 
+export interface RerunAllResponse {
+  triggered: number;
+  simulation_ids: string[];
+}
+
 export interface SimulationResults {
   simulation_id: string;
   t: number[];
@@ -104,21 +109,45 @@ export interface SimulationResults {
   m_prop: number[];
   burn_area: number[];
   propellant_volume: number[];
+  free_chamber_volume: number[];
   web: number[];
   burn_rate: number[];
+  C_f: number[];
+  C_f_ideal: number[];
   nozzle_efficiency: number[];
   overall_efficiency: number[];
   eta_div: number[];
   eta_kin: number[];
   eta_bl: number[];
   eta_2p: number[];
+  grain_mass_flux: number[][];
+  propellant_cog: number[][];
+  propellant_moi: number[][][];
   total_impulse: number;
   specific_impulse: number;
   thrust_time: number;
+  burn_time: number;
   max_thrust: number;
   avg_thrust: number;
   max_chamber_pressure: number;
+  avg_chamber_pressure: number;
+  avg_nozzle_efficiency: number;
+  avg_overall_efficiency: number;
+  initial_propellant_mass: number;
+  volumetric_efficiency: number;
+  mean_klemmung: number;
+  max_klemmung: number;
+  initial_to_final_klemmung_ratio: number;
+  max_mass_flux: number;
   burn_profile: string;
+}
+
+export interface SimulationDetails {
+  simulation_id: string;
+  motor_id: string;
+  motor_config: SolidMotorConfig;
+  params: IBSimParams;
+  results: SimulationResults;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,8 +242,8 @@ export class ApiClient {
     return data;
   }
 
-  async getSimulationResults(simId: string): Promise<SimulationResults> {
-    const { data } = await this.http.get<SimulationResults>(
+  async getSimulationResults(simId: string): Promise<SimulationDetails> {
+    const { data } = await this.http.get<SimulationDetails>(
       `/simulations/${simId}/results`,
     );
     return data;
@@ -222,6 +251,13 @@ export class ApiClient {
 
   async deleteSimulation(simId: string): Promise<void> {
     await this.http.delete(`/simulations/${simId}`);
+  }
+
+  async rerunAllSimulations(): Promise<RerunAllResponse> {
+    const { data } = await this.http.post<RerunAllResponse>(
+      "/simulations/rerun-all",
+    );
+    return data;
   }
 
   // ── Users ──────────────────────────────────────────────────────────────────
