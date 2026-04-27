@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useApiClient, type MotorDetail } from "@/lib/api";
+import {
+  useApiClient,
+  type MotorDetail,
+  type PropellantItem,
+} from "@/lib/api";
+import { mToMm, fractionToPercent } from "@/lib/units";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -24,21 +29,49 @@ export default function MotorDetailPage() {
   );
 }
 
+function Field({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) {
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="text-sm font-medium">
+        {value === null || value === undefined || value === "" ? "—" : value}
+      </p>
+    </div>
+  );
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
 function MotorDetailContent() {
   const params = useParams();
   const motorId = params.id as string;
   const api = useApiClient();
   const router = useRouter();
   const [motor, setMotor] = useState<MotorDetail | null>(null);
+  const [propellants, setPropellants] = useState<PropellantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .getMotor(motorId)
-      .then(setMotor)
+    Promise.all([api.getMotor(motorId), api.listPropellants()])
+      .then(([m, p]) => {
+        setMotor(m);
+        setPropellants(p);
+      })
       .catch(() => setError("Motor not found"))
       .finally(() => setLoading(false));
   }, [motorId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -68,9 +101,14 @@ function MotorDetailContent() {
     }
   }
 
+  const propellantName = motor
+    ? (propellants.find((p) => p.id === motor.config.propellant_id)?.name ??
+      motor.config.propellant_id)
+    : "";
+
   return (
     <AppLayout>
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -99,67 +137,176 @@ function MotorDetailContent() {
               </div>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Propellant</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Badge>{motor.config.propellant_id}</Badge>
-              </CardContent>
-            </Card>
+            <p className="text-xs text-muted-foreground">
+              Created {formatDate(motor.created_at)}
+              {" · "}
+              Updated {formatDate(motor.updated_at)}
+            </p>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Grain</CardTitle>
-                <CardDescription>
-                  {motor.config.grain.segments.length} segments
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="divide-y">
-                {motor.config.grain.segments.map((seg, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 text-sm"
-                  >
-                    <span className="text-muted-foreground">#{i + 1}</span>
-                    <span>OD: {(seg.outer_diameter * 1000).toFixed(1)} mm</span>
-                    <span>
-                      Core: {(seg.core_diameter * 1000).toFixed(1)} mm
-                    </span>
-                    <span>L: {(seg.length * 1000).toFixed(1)} mm</span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              <Card className="lg:col-span-4 flex flex-col">
+                <CardHeader>
+                  <CardTitle>Propellant</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-1 items-center">
+                  <Badge className="text-sm">{propellantName}</Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-8 flex flex-col">
+                <CardHeader>
+                  <CardTitle>Mass & Geometry</CardTitle>
+                </CardHeader>
+                <CardContent className="grid flex-1 grid-cols-2 sm:grid-cols-3 gap-4 content-center">
+                  <Field
+                    label="Dry Mass"
+                    value={`${motor.config.thrust_chamber.dry_mass.toFixed(3)} kg`}
+                  />
+                  <Field
+                    label="Exit ↔ Port"
+                    value={`${mToMm(motor.config.thrust_chamber.nozzle_exit_to_grain_port_distance).toFixed(1)} mm`}
+                  />
+                  <Field
+                    label="Center of Gravity"
+                    value={
+                      motor.config.thrust_chamber.center_of_gravity_coordinate
+                        ? `(${motor.config.thrust_chamber.center_of_gravity_coordinate
+                            .map((c) => mToMm(c).toFixed(1))
+                            .join(", ")}) mm`
+                        : null
+                    }
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-7 flex flex-col">
+                <CardHeader>
+                  <CardTitle>Nozzle</CardTitle>
+                </CardHeader>
+                <CardContent className="grid flex-1 grid-cols-2 sm:grid-cols-4 gap-4 content-between">
+                  <Field
+                    label="Inlet Ø"
+                    value={`${mToMm(motor.config.thrust_chamber.nozzle.inlet_diameter).toFixed(1)} mm`}
+                  />
+                  <Field
+                    label="Throat Ø"
+                    value={`${mToMm(motor.config.thrust_chamber.nozzle.throat_diameter).toFixed(1)} mm`}
+                  />
+                  <Field
+                    label="Expansion Ratio"
+                    value={motor.config.thrust_chamber.nozzle.expansion_ratio}
+                  />
+                  <Field
+                    label="Convergent Angle"
+                    value={`${motor.config.thrust_chamber.nozzle.convergent_angle}°`}
+                  />
+                  <Field
+                    label="Divergent Angle"
+                    value={`${motor.config.thrust_chamber.nozzle.divergent_angle}°`}
+                  />
+                  <Field
+                    label="Discharge Coeff. (C₁)"
+                    value={motor.config.thrust_chamber.nozzle.c_1}
+                  />
+                  <Field
+                    label="Thrust Coeff. Loss (C₂)"
+                    value={motor.config.thrust_chamber.nozzle.c_2}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-5 flex flex-col">
+                <CardHeader>
+                  <CardTitle>Combustion Chamber</CardTitle>
+                </CardHeader>
+                <CardContent className="grid flex-1 grid-cols-2 gap-4 content-between">
+                  <Field
+                    label="Casing Inner Ø"
+                    value={`${mToMm(motor.config.thrust_chamber.combustion_chamber.casing_inner_diameter).toFixed(1)} mm`}
+                  />
+                  <Field
+                    label="Casing Outer Ø"
+                    value={`${mToMm(motor.config.thrust_chamber.combustion_chamber.casing_outer_diameter).toFixed(1)} mm`}
+                  />
+                  <Field
+                    label="Internal Length"
+                    value={`${mToMm(motor.config.thrust_chamber.combustion_chamber.internal_length).toFixed(1)} mm`}
+                  />
+                  <Field
+                    label="Liner Thickness"
+                    value={`${mToMm(motor.config.thrust_chamber.combustion_chamber.thermal_liner_thickness).toFixed(2)} mm`}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-12">
+                <CardHeader>
+                  <CardTitle>Grain</CardTitle>
+                  <CardDescription>
+                    {motor.config.grain.segments.length} segment
+                    {motor.config.grain.segments.length !== 1 ? "s" : ""}
+                    {" · "}
+                    Spacing {mToMm(motor.config.grain.spacing).toFixed(1)} mm
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground">
+                          <th className="px-3 py-2 text-left font-medium">#</th>
+                          <th className="px-3 py-2 text-left font-medium">
+                            Type
+                          </th>
+                          <th className="px-3 py-2 text-right font-medium">
+                            Outer Ø
+                          </th>
+                          <th className="px-3 py-2 text-right font-medium">
+                            Core Ø
+                          </th>
+                          <th className="px-3 py-2 text-right font-medium">
+                            Length
+                          </th>
+                          <th className="px-3 py-2 text-right font-medium">
+                            Density Ratio
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {motor.config.grain.segments.map((seg, i) => (
+                          <tr
+                            key={i}
+                            className="border-b last:border-0 hover:bg-accent/40"
+                          >
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {i + 1}
+                            </td>
+                            <td className="px-3 py-2">
+                              <Badge variant="secondary">
+                                {seg.type.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">
+                              {mToMm(seg.outer_diameter).toFixed(1)} mm
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">
+                              {mToMm(seg.core_diameter).toFixed(1)} mm
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">
+                              {mToMm(seg.length).toFixed(1)} mm
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">
+                              {fractionToPercent(seg.density_ratio).toFixed(1)}
+                              %
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Nozzle</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Throat Ø</p>
-                  <p>
-                    {(
-                      motor.config.thrust_chamber.nozzle.throat_diameter * 1000
-                    ).toFixed(1)}{" "}
-                    mm
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">
-                    Expansion Ratio
-                  </p>
-                  <p>{motor.config.thrust_chamber.nozzle.expansion_ratio}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">
-                    Divergent Angle
-                  </p>
-                  <p>{motor.config.thrust_chamber.nozzle.divergent_angle}°</p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </>
         )}
       </div>
