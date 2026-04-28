@@ -13,7 +13,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Activity, Loader2, Trash2 } from "lucide-react";
 
 type SortKey = "motor_name" | "status" | "created_at" | "updated_at";
@@ -156,7 +156,7 @@ function SimulationsContent() {
           </Card>
         )}
 
-        <CriticalConfirmDialog
+        <ConfirmDialog
           open={pendingDeleteId !== null}
           onOpenChange={(open) => {
             if (!open && deletingId === null) {

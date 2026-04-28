@@ -11,7 +11,7 @@ import { useActiveSimulation } from "@/components/simulation/useActiveSimulation
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Activity, Flame, Loader2, Pencil, Play, Trash2 } from "lucide-react";
 
 type SortKey = "name" | "motor_type" | "created_at" | "updated_at";
@@ -165,7 +165,7 @@ function MotorsContent() {
           }}
         />
 
-        <CriticalConfirmDialog
+        <ConfirmDialog
           open={pendingDelete !== null}
           onOpenChange={(open) => {
             if (!open && deletingId === null) {

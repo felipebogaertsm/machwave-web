@@ -65,7 +65,10 @@ function formatDateTime(ts: string): string {
   });
 }
 
-function transitionLabel(prevStatus: SimulationStatus, ms: number): string {
+function transitionLabel(
+  prevStatus: SimulationStatus,
+  ms: number,
+): string | null {
   const dur = formatDuration(ms);
   switch (prevStatus) {
     case "pending":
@@ -74,9 +77,11 @@ function transitionLabel(prevStatus: SimulationStatus, ms: number): string {
       return `ran for ${dur}`;
     case "retried":
       return `re-queued ${dur}`;
+    // Idle gap between a terminal event and a user-triggered retry isn't
+    // meaningful — drop it.
     case "failed":
     case "done":
-      return `idle ${dur}`;
+      return null;
   }
 }
 
@@ -219,11 +224,13 @@ export function SimulationTimeline({
                   </time>
                 </div>
 
-                {sincePrevMs != null && (
-                  <p className="text-xs text-muted-foreground">
-                    {transitionLabel(prev!.status, sincePrevMs)}
-                  </p>
-                )}
+                {sincePrevMs != null &&
+                  (() => {
+                    const label = transitionLabel(prev!.status, sincePrevMs);
+                    return label != null ? (
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                    ) : null;
+                  })()}
 
                 {elapsedMs != null && (
                   <p className="text-xs text-muted-foreground">

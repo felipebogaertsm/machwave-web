@@ -21,11 +21,13 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -84,6 +86,7 @@ function SimulationContent() {
   const [costOpen, setCostOpen] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+  const [retryConfirmOpen, setRetryConfirmOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const fetchingRef = useRef(false);
   const costFetchedRef = useRef(false);
@@ -216,6 +219,7 @@ function SimulationContent() {
       // Pull the new state immediately (the trail now ends with `retried`).
       revalidate();
       refreshActiveSim();
+      setRetryConfirmOpen(false);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const code = err.response?.status;
@@ -318,7 +322,10 @@ function SimulationContent() {
                   : "Retry available once the run completes"
               }
               aria-label="Retry simulation"
-              onClick={handleRetry}
+              onClick={() => {
+                setRetryError(null);
+                setRetryConfirmOpen(true);
+              }}
               disabled={
                 !isTerminal ||
                 retrying ||
@@ -373,9 +380,6 @@ function SimulationContent() {
 
         {pollError && (
           <p className="text-sm text-destructive">Polling error: {pollError}</p>
-        )}
-        {retryError && (
-          <p className="text-sm text-destructive">{retryError}</p>
         )}
         {deleteError && (
           <p className="text-sm text-destructive">{deleteError}</p>
@@ -456,6 +460,56 @@ function SimulationContent() {
           />
         )}
 
+        <Dialog
+          open={retryConfirmOpen}
+          onOpenChange={(open) => {
+            if (retrying) return;
+            setRetryConfirmOpen(open);
+            if (!open) setRetryError(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Retry simulation?
+              </DialogTitle>
+              <DialogDescription>
+                Queue a fresh run for this simulation. Tokens will be charged
+                again — failed runs were refunded; done runs already paid for
+                prior work; both are charged again on retry. The previous
+                results will be replaced once the new run completes.
+              </DialogDescription>
+            </DialogHeader>
+
+            {retryError && (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {retryError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" type="button" disabled={retrying}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                type="button"
+                onClick={handleRetry}
+                disabled={retrying}
+              >
+                {retrying ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {retrying ? "Retrying…" : "Retry"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
           <DialogContent className="max-w-xl">
             <DialogHeader>
@@ -477,7 +531,7 @@ function SimulationContent() {
           </DialogContent>
         </Dialog>
 
-        <CriticalConfirmDialog
+        <ConfirmDialog
           open={deleteOpen}
           onOpenChange={(open) => {
             if (!deleting) {

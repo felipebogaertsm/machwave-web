@@ -14,7 +14,7 @@ import { RunSimulationDialog } from "@/components/simulation/RunSimulationDialog
 import { useActiveSimulation } from "@/components/simulation/useActiveSimulation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { SolidMotorDetailBody } from "@/components/motor/SolidMotorDetailBody";
 import { Activity, Loader2, Pencil, Trash2, Play } from "lucide-react";
@@ -178,7 +178,7 @@ function MotorDetailContent() {
           }}
         />
 
-        <CriticalConfirmDialog
+        <ConfirmDialog
           open={deleteOpen}
           onOpenChange={(open) => {
             if (!deleting) {
