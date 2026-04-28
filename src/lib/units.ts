@@ -82,10 +82,67 @@ function solidConfigToApi(config: SolidMotorConfig): SolidMotorConfig {
   };
 }
 
+export function toMotorApiConfig(config: SolidMotorConfig): SolidMotorConfig;
+export function toMotorApiConfig(config: MotorConfig): MotorConfig;
 export function toMotorApiConfig(config: MotorConfig): MotorConfig {
   switch (config.motor_type) {
     case "solid":
       return solidConfigToApi(config);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reverse: SI → UI units. Used when populating the wizard for edit.
+// ---------------------------------------------------------------------------
+
+function solidConfigFromApi(config: SolidMotorConfig): SolidMotorConfig {
+  return {
+    ...config,
+    grain: {
+      ...config.grain,
+      spacing: mToMm(config.grain.spacing),
+      segments: config.grain.segments.map((seg) => ({
+        ...seg,
+        outer_diameter: mToMm(seg.outer_diameter),
+        core_diameter: mToMm(seg.core_diameter),
+        length: mToMm(seg.length),
+        density_ratio: fractionToPercent(seg.density_ratio),
+      })),
+    },
+    thrust_chamber: {
+      ...config.thrust_chamber,
+      nozzle: {
+        ...config.thrust_chamber.nozzle,
+        inlet_diameter: mToMm(config.thrust_chamber.nozzle.inlet_diameter),
+        throat_diameter: mToMm(config.thrust_chamber.nozzle.throat_diameter),
+      },
+      combustion_chamber: {
+        casing_inner_diameter: mToMm(
+          config.thrust_chamber.combustion_chamber.casing_inner_diameter,
+        ),
+        casing_outer_diameter: mToMm(
+          config.thrust_chamber.combustion_chamber.casing_outer_diameter,
+        ),
+        internal_length: mToMm(
+          config.thrust_chamber.combustion_chamber.internal_length,
+        ),
+        thermal_liner_thickness: mToMm(
+          config.thrust_chamber.combustion_chamber.thermal_liner_thickness,
+        ),
+      },
+      nozzle_exit_to_grain_port_distance: mToMm(
+        config.thrust_chamber.nozzle_exit_to_grain_port_distance,
+      ),
+    },
+  };
+}
+
+export function fromMotorApiConfig(config: SolidMotorConfig): SolidMotorConfig;
+export function fromMotorApiConfig(config: MotorConfig): MotorConfig;
+export function fromMotorApiConfig(config: MotorConfig): MotorConfig {
+  switch (config.motor_type) {
+    case "solid":
+      return solidConfigFromApi(config);
   }
 }
 

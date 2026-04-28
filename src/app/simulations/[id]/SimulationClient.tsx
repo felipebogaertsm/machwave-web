@@ -15,7 +15,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileJson, Trash2 } from "lucide-react";
+import { FileJson, Loader2, Trash2 } from "lucide-react";
 
 function statusVariant(
   status: string,
@@ -161,7 +161,7 @@ function SimulationContent() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
@@ -213,7 +213,11 @@ function SimulationContent() {
               onClick={handleDelete}
               disabled={deleting}
             >
-              <Trash2 className="h-4 w-4" />
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
@@ -273,6 +277,17 @@ function SimulationContent() {
               <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
                 {status.error ?? "Unknown error"}
               </pre>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Brief gap between status flipping to "done" and the results
+            payload arriving — show a spinner so the page isn't blank. */}
+        {status?.status === "done" && !details && (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-muted-foreground">Loading results…</p>
             </CardContent>
           </Card>
         )}

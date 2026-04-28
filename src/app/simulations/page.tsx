@@ -11,8 +11,9 @@ import {
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity } from "lucide-react";
+import { Activity, Loader2, Trash2 } from "lucide-react";
 
 type SortKey = "motor_name" | "status" | "created_at" | "updated_at";
 type SortDir = "asc" | "desc";
@@ -50,6 +51,22 @@ function SimulationsContent() {
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete(simId: string) {
+    if (!confirm("Delete this simulation? This cannot be undone.")) return;
+    setDeletingId(simId);
+    setError(null);
+    try {
+      await api.deleteSimulation(simId);
+      setSims((prev) => prev.filter((s) => s.simulation_id !== simId));
+    } catch {
+      setError("Failed to delete simulation.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     Promise.all([api.listSimulations(), api.listMotors()])
@@ -88,7 +105,7 @@ function SimulationsContent() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Activity className="h-6 w-6 text-blue-500" />
@@ -113,6 +130,8 @@ function SimulationsContent() {
             </CardContent>
           </Card>
         )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {!loading && sims.length === 0 && (
           <Card>
@@ -163,6 +182,7 @@ function SimulationsContent() {
                         onClick={toggleSort}
                         align="right"
                       />
+                      <th className="w-px px-3 py-2" />
                     </tr>
                   </thead>
                   <tbody>
@@ -204,6 +224,26 @@ function SimulationsContent() {
                           </td>
                           <td className="px-3 py-3 text-right text-muted-foreground tabular-nums">
                             {new Date(sim.updated_at).toLocaleString()}
+                          </td>
+                          <td
+                            className="px-3 py-2 text-right"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              aria-label="Delete simulation"
+                              title="Delete"
+                              disabled={deletingId === sim.simulation_id}
+                              onClick={() => handleDelete(sim.simulation_id)}
+                            >
+                              {deletingId === sim.simulation_id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
                           </td>
                         </tr>
                       );

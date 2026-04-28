@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   useApiClient,
@@ -10,8 +11,9 @@ import {
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { SolidMotorDetailBody } from "@/components/motor/SolidMotorDetailBody";
-import { Trash2, Play } from "lucide-react";
+import { Loader2, Pencil, Trash2, Play } from "lucide-react";
 
 export default function MotorDetailPage() {
   return (
@@ -83,8 +85,8 @@ function MotorDetailContent() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl space-y-6">
-        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      <div className="space-y-6">
+        {loading && <Spinner />}
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         {motor && (
@@ -98,16 +100,31 @@ function MotorDetailContent() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={handleSimulate} disabled={simulating}>
-                  <Play className="mr-2 h-4 w-4" />
+                  {simulating ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="mr-2 h-4 w-4" />
+                  )}
                   {simulating ? "Starting…" : "Run Simulation"}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/motors/${motorId}/edit`}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
                 </Button>
                 <Button
                   variant="destructive"
                   size="icon"
                   onClick={handleDelete}
                   disabled={deleting}
+                  aria-label="Delete motor"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {deleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>

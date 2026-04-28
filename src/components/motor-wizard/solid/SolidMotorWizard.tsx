@@ -14,6 +14,7 @@ import {
   type MotorForm,
   type SolidMotorForm,
 } from "@/lib/validations";
+import { Loader2 } from "lucide-react";
 import { useApiClient } from "@/lib/api";
 import { toMotorApiConfig } from "@/lib/units";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,16 @@ type StepName = (typeof STEPS)[number];
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function SolidMotorWizard() {
+
+type Props =
+  | { mode?: "create" }
+  | { mode: "edit"; motorId: string; initialValues: SolidMotorForm };
+
+export function SolidMotorWizard(props: Props = {}) {
+  const isEdit = props.mode === "edit";
+  const motorId = isEdit ? props.motorId : undefined;
+  const initialValues = isEdit ? props.initialValues : DEFAULT_VALUES;
+
   const router = useRouter();
   const api = useApiClient();
   const [stepIndex, setStepIndex] = useState(0);
@@ -87,7 +97,7 @@ export function SolidMotorWizard() {
 
   const form = useForm<MotorForm>({
     resolver: zodResolver(motorFormSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: initialValues,
     mode: "onBlur",
   });
 
@@ -130,11 +140,19 @@ export function SolidMotorWizard() {
     setSubmitting(true);
     setServerError(null);
     try {
-      const { motor_id } = await api.createMotor({
-        name: data.name,
-        config: toMotorApiConfig(data.config),
-      });
-      router.push(`/motors/${motor_id}`);
+      if (isEdit && motorId) {
+        await api.updateMotor(motorId, {
+          name: data.name,
+          config: toMotorApiConfig(data.config),
+        });
+        router.push(`/motors/${motorId}`);
+      } else {
+        const { motor_id } = await api.createMotor({
+          name: data.name,
+          config: toMotorApiConfig(data.config),
+        });
+        router.push(`/motors/${motor_id}`);
+      }
     } catch (err: unknown) {
       setServerError(
         err instanceof Error && "response" in err
@@ -221,7 +239,14 @@ export function SolidMotorWizard() {
               className="w-full"
               disabled={submitting}
             >
-              {submitting ? "Saving…" : "Create Motor"}
+              {submitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {submitting
+                ? "Saving…"
+                : isEdit
+                  ? "Save Changes"
+                  : "Create Motor"}
             </Button>
           )}
         </div>

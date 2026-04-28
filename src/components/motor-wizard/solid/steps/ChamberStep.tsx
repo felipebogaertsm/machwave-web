@@ -1,14 +1,13 @@
 "use client";
 
 import {
-  Controller,
   type Control,
   type FieldErrors,
   type FieldPath,
 } from "react-hook-form";
 import type { SolidMotorForm } from "@/lib/validations";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberField } from "../../NumberField";
 
 interface Props {
   control: Control<SolidMotorForm>;
@@ -43,20 +42,12 @@ export function ChamberStep({ control, errors }: Props) {
           {chamberFields.map(({ label, name, step }) => (
             <div key={name} className="space-y-1">
               <Label className="text-sm">{label}</Label>
-              <Controller
+              <NumberField
+                control={control}
                 name={
                   `config.thrust_chamber.combustion_chamber.${name}` as FieldPath<SolidMotorForm>
                 }
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    type="number"
-                    step={step}
-                    {...field}
-                    value={typeof field.value === "number" ? field.value : ""}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                  />
-                )}
+                step={step}
               />
               {errors?.config?.thrust_chamber?.combustion_chamber?.[name] && (
                 <p className="text-xs text-destructive">
@@ -76,32 +67,18 @@ export function ChamberStep({ control, errors }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label className="text-sm">Dry Mass (kg)</Label>
-            <Controller
-              name="config.thrust_chamber.dry_mass"
+            <NumberField
               control={control}
-              render={({ field }) => (
-                <Input
-                  type="number"
-                  step="0.01"
-                  {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                />
-              )}
+              name="config.thrust_chamber.dry_mass"
+              step="0.01"
             />
           </div>
           <div className="space-y-1">
             <Label className="text-sm">Nozzle Exit → Grain Port (mm)</Label>
-            <Controller
-              name="config.thrust_chamber.nozzle_exit_to_grain_port_distance"
+            <NumberField
               control={control}
-              render={({ field }) => (
-                <Input
-                  type="number"
-                  step="1"
-                  {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                />
-              )}
+              name="config.thrust_chamber.nozzle_exit_to_grain_port_distance"
+              step="1"
             />
           </div>
         </div>

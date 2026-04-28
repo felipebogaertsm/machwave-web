@@ -312,6 +312,13 @@ export class ApiClient {
     return data;
   }
 
+  // ── Health ─────────────────────────────────────────────────────────────────
+
+  async health(): Promise<{ status: string }> {
+    const { data } = await this.http.get<Record<string, string>>("/health");
+    return { status: data.status ?? "unknown" };
+  }
+
   // ── Users ──────────────────────────────────────────────────────────────────
 
   async clearAccount(userId: string): Promise<void> {

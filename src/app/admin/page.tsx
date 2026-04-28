@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useApiClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { HealthCheckCard } from "@/components/admin/HealthCheckCard";
 
 type RerunStatus =
   | { kind: "idle" }
@@ -60,6 +61,8 @@ function AdminPage() {
             </p>
           </div>
         </div>
+
+        <HealthCheckCard />
 
         <Card>
           <CardHeader>

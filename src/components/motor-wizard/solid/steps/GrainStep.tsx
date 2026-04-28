@@ -3,17 +3,16 @@
 import {
   useFieldArray,
   useWatch,
-  Controller,
   type Control,
   type FieldErrors,
   type FieldPath,
 } from "react-hook-form";
 import type { SolidMotorForm } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, Plus, Trash2 } from "lucide-react";
+import { NumberField } from "../../NumberField";
 
 interface Props {
   control: Control<SolidMotorForm>;
@@ -127,21 +126,12 @@ export function GrainStep({ control, errors }: Props) {
       {/* Spacing */}
       <div className="space-y-1">
         <Label htmlFor="spacing">Inter-segment Spacing (mm)</Label>
-        <Controller
-          name="config.grain.spacing"
+        <NumberField
           control={control}
-          render={({ field }) => (
-            <Input
-              id="spacing"
-              type="number"
-              step="0.1"
-              min="0"
-              {...field}
-              value={typeof field.value === "number" ? field.value : ""}
-              onChange={(e) => field.onChange(parseFloat(e.target.value))}
-              className="w-full max-w-xs"
-            />
-          )}
+          name="config.grain.spacing"
+          id="spacing"
+          step="0.1"
+          className="w-full max-w-xs"
         />
         {errors?.config?.grain?.spacing && (
           <p className="text-xs text-destructive">
@@ -154,7 +144,8 @@ export function GrainStep({ control, errors }: Props) {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: controlled number input that works with react-hook-form Controller
+// Helper: per-segment number input. Uses the shared NumberField for the
+// NaN-safe controlled-input behaviour.
 // ---------------------------------------------------------------------------
 
 function SegmentField({
@@ -175,24 +166,12 @@ function SegmentField({
       <Label htmlFor={name} className="text-xs">
         {label}
       </Label>
-      <Controller
-        name={name}
+      <NumberField
         control={control}
-        render={({ field }) => (
-          <Input
-            id={name}
-            type="number"
-            step={step}
-            {...field}
-            value={
-              typeof field.value === "number" && !isNaN(field.value as number)
-                ? field.value
-                : ""
-            }
-            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-            className="h-8 text-sm"
-          />
-        )}
+        name={name}
+        id={name}
+        step={step}
+        className="h-8 text-sm"
       />
       {error?.message && (
         <p className="text-xs text-destructive">{error.message}</p>

@@ -1,14 +1,13 @@
 "use client";
 
 import {
-  Controller,
   type Control,
   type FieldErrors,
   type FieldPath,
 } from "react-hook-form";
 import type { SolidMotorForm } from "@/lib/validations";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberField } from "../../NumberField";
 
 interface Props {
   control: Control<SolidMotorForm>;
@@ -37,20 +36,12 @@ export function NozzleStep({ control, errors }: Props) {
         {fields.map(({ label, name, step }) => (
           <div key={name} className="space-y-1">
             <Label className="text-sm">{label}</Label>
-            <Controller
+            <NumberField
+              control={control}
               name={
                 `config.thrust_chamber.nozzle.${name}` as FieldPath<SolidMotorForm>
               }
-              control={control}
-              render={({ field }) => (
-                <Input
-                  type="number"
-                  step={step ?? "any"}
-                  {...field}
-                  value={typeof field.value === "number" ? field.value : ""}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                />
-              )}
+              step={step}
             />
             {errors?.config?.thrust_chamber?.nozzle?.[name] && (
               <p className="text-xs text-destructive">
