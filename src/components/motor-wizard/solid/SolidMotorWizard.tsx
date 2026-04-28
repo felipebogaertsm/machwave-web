@@ -192,24 +192,36 @@ export function SolidMotorWizard() {
           <p className="text-sm text-destructive">{serverError}</p>
         )}
 
-        {/* Navigation */}
-        <div className="flex justify-between pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setStepIndex((i) => i - 1)}
-            disabled={stepIndex === 0}
-          >
-            Back
-          </Button>
-
-          {isLastStep ? (
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Create Motor"}
+        {/* Navigation
+            On the Review step the submit button moves to its own row below
+            so an accidental second click after pressing Next can't land on
+            the Submit position and skip past Review. */}
+        <div className="space-y-3 pt-4">
+          <div className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStepIndex((i) => i - 1)}
+              disabled={stepIndex === 0}
+            >
+              Back
             </Button>
-          ) : (
-            <Button type="button" onClick={goNext}>
-              Next
+
+            {!isLastStep && (
+              <Button type="button" onClick={goNext}>
+                Next
+              </Button>
+            )}
+          </div>
+
+          {isLastStep && (
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={submitting}
+            >
+              {submitting ? "Saving…" : "Create Motor"}
             </Button>
           )}
         </div>
