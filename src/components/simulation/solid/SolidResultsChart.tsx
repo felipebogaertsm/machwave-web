@@ -82,57 +82,183 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// Standardised export dimensions. 1920 px wide gives ~6.4" at 300 DPI — a
+// good fit for full-width charts in reports and slides. Height is computed
+// from the on-screen aspect ratio so the chart doesn't squash.
+const EXPORT_WIDTH = 1920;
+const EXPORT_BG = "#ffffff";
+const EXPORT_TEXT = "#1f2937"; // gray-800
+const EXPORT_GRID = "#e5e7eb"; // gray-200
+const EXPORT_AXIS = "#9ca3af"; // gray-400
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+interface LegendItem {
+  color: string;
+  label: string;
+  textWidth: number;
+}
+
+// Recharts renders the legend as plain HTML outside the chart's <svg>, so
+// a naive svg.cloneNode() drops it. Read what's in the DOM and rebuild it
+// as inline SVG when we compose the export.
+function readLegendItems(container: HTMLElement): LegendItem[] {
+  return Array.from(container.querySelectorAll(".recharts-legend-item"))
+    .map((item) => {
+      const swatch = item.querySelector(".recharts-legend-icon");
+      const text = item.querySelector<HTMLElement>(
+        ".recharts-legend-item-text",
+      );
+      const label = text?.textContent?.trim() ?? "";
+      const color =
+        swatch?.getAttribute("fill") ??
+        swatch?.getAttribute("stroke") ??
+        EXPORT_TEXT;
+      // offsetWidth is precise for the actual rendered label; fall back to a
+      // rough char-width estimate if Recharts hasn't laid the text out yet.
+      const textWidth = text?.offsetWidth ?? Math.max(40, label.length * 7);
+      return { color, label, textWidth };
+    })
+    .filter((it) => it.label.length > 0);
+}
+
+function applyExportTheme(svg: SVGSVGElement) {
+  // All text → dark, regardless of theme
+  svg.querySelectorAll<SVGElement>("text, tspan").forEach((el) => {
+    el.style.fill = EXPORT_TEXT;
+    el.style.fontFamily = "Helvetica, Arial, sans-serif";
+  });
+  // Grid lines (className="stroke-border" doesn't resolve outside the page)
+  svg
+    .querySelectorAll<SVGElement>(
+      ".recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line",
+    )
+    .forEach((el) => {
+      el.style.stroke = EXPORT_GRID;
+    });
+  // Axis lines and tick marks
+  svg
+    .querySelectorAll<SVGElement>(
+      ".recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line",
+    )
+    .forEach((el) => {
+      el.style.stroke = EXPORT_AXIS;
+    });
+  // Drop any tooltip cursor / active-dot artefacts left from the user's
+  // last hover so they don't appear in the export.
+  svg
+    .querySelectorAll(".recharts-tooltip-cursor, .recharts-active-dot")
+    .forEach((el) => el.parentNode?.removeChild(el));
+}
+
+function appendLegend(
+  svg: SVGSVGElement,
+  items: LegendItem[],
+  width: number,
+  yBaseline: number,
+) {
+  const FONT_SIZE = 12;
+  const SWATCH_SIZE = 12;
+  const SWATCH_TEXT_GAP = 6;
+  const ITEM_GAP = 18;
+
+  const itemWidths = items.map(
+    (it) =>
+      SWATCH_SIZE +
+      SWATCH_TEXT_GAP +
+      Math.max(it.textWidth, it.label.length * FONT_SIZE * 0.55),
+  );
+  const totalWidth =
+    itemWidths.reduce((a, b) => a + b, 0) +
+    ITEM_GAP * Math.max(0, items.length - 1);
+  let cursor = Math.max(8, (width - totalWidth) / 2);
+
+  items.forEach((item, i) => {
+    const swatch = document.createElementNS(SVG_NS, "rect");
+    swatch.setAttribute("x", String(cursor));
+    swatch.setAttribute("y", String(yBaseline - SWATCH_SIZE));
+    swatch.setAttribute("width", String(SWATCH_SIZE));
+    swatch.setAttribute("height", String(SWATCH_SIZE));
+    swatch.setAttribute("rx", "2");
+    swatch.setAttribute("fill", item.color);
+    svg.appendChild(swatch);
+
+    const label = document.createElementNS(SVG_NS, "text");
+    label.setAttribute("x", String(cursor + SWATCH_SIZE + SWATCH_TEXT_GAP));
+    label.setAttribute("y", String(yBaseline));
+    label.setAttribute("font-size", String(FONT_SIZE));
+    label.setAttribute("font-family", "Helvetica, Arial, sans-serif");
+    label.setAttribute("fill", EXPORT_TEXT);
+    label.textContent = item.label;
+    svg.appendChild(label);
+
+    cursor += itemWidths[i] + ITEM_GAP;
+  });
+}
+
 function exportChartPng(container: HTMLElement | null, filename: string) {
   if (!container) return;
-  const svg = container.querySelector("svg");
+  // Recharts gives the *main* chart surface and every legend swatch the same
+  // `recharts-surface` class. Picking by class would match the first one in
+  // DOM order, which can be a 14×14 swatch — that's how the export ended up
+  // 7954 px tall. Filter by rendered size instead.
+  const svg = Array.from(
+    container.querySelectorAll<SVGSVGElement>("svg"),
+  ).find((s) => {
+    const r = s.getBoundingClientRect();
+    return r.width >= 100 && r.height >= 100;
+  });
   if (!svg) return;
 
   const rect = svg.getBoundingClientRect();
-  const width = Math.ceil(rect.width);
-  const height = Math.ceil(rect.height);
+  if (rect.width === 0 || rect.height === 0) return;
+
+  const chartW = Math.round(rect.width);
+  const chartH = Math.round(rect.height);
+  const legendItems = readLegendItems(container);
+  const legendPad = legendItems.length > 0 ? 44 : 0;
+  const totalW = chartW;
+  const totalH = chartH + legendPad;
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
-  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(width));
-  clone.setAttribute("height", String(height));
+  clone.setAttribute("xmlns", SVG_NS);
+  clone.setAttribute("width", String(totalW));
+  clone.setAttribute("height", String(totalH));
+  clone.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
 
-  // Inline computed styles for elements that rely on CSS classes (e.g. grid stroke)
-  const sources = svg.querySelectorAll("*");
-  const targets = clone.querySelectorAll("*");
-  sources.forEach((src, i) => {
-    const target = targets[i] as SVGElement | undefined;
-    if (!target) return;
-    const computed = window.getComputedStyle(src);
-    const props = ["stroke", "stroke-width", "fill", "font-size", "font-family"];
-    for (const p of props) {
-      const v = computed.getPropertyValue(p);
-      if (v) target.style.setProperty(p, v);
-    }
-  });
+  applyExportTheme(clone);
+  if (legendItems.length > 0) {
+    appendLegend(clone, legendItems, totalW, chartH + 26);
+  }
 
   const svgStr = new XMLSerializer().serializeToString(clone);
   const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
   const svgUrl = URL.createObjectURL(svgBlob);
 
+  const exportW = EXPORT_WIDTH;
+  const exportH = Math.round(exportW * (totalH / totalW));
+
   const img = new Image();
   img.onload = () => {
-    const scale = window.devicePixelRatio || 2;
     const canvas = document.createElement("canvas");
-    canvas.width = width * scale;
-    canvas.height = height * scale;
+    canvas.width = exportW;
+    canvas.height = exportH;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       URL.revokeObjectURL(svgUrl);
       return;
     }
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = EXPORT_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.scale(scale, scale);
-    ctx.drawImage(img, 0, 0, width, height);
+    // Rasterise the SVG straight at the target size — vector → bitmap stays
+    // sharp regardless of how big or small the on-screen chart was.
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(svgUrl);
     canvas.toBlob((blob) => {
       if (blob) triggerDownload(blob, filename);
     }, "image/png");
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(svgUrl);
   };
   img.src = svgUrl;
 }
