@@ -12,7 +12,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { NewMotorButton } from "@/components/motor/NewMotorButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Flame, Activity, ChevronRight } from "lucide-react";
+import { Flame, Activity, ChevronRight, Sparkles } from "lucide-react";
 
 function statusVariant(
   status: SimulationSummary["status"],
@@ -59,6 +59,27 @@ function DashboardContent() {
           <h1 className="text-2xl font-bold tracking-tight">dashboard</h1>
           <NewMotorButton />
         </div>
+
+        {!loading && motors.length === 0 && sims.length === 0 && (
+          <Link href="/getting-started/solid" className="block">
+            <Card className="group border-primary/30 bg-primary/5 transition-colors hover:border-primary/60 hover:bg-primary/10 cursor-pointer">
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    New here? Simulate your first solid motor in 3 steps.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    A short walkthrough — get to a thrust curve fast.
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
         {/* Motors */}
         <section className="space-y-3">

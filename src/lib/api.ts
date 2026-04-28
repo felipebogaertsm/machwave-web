@@ -148,6 +148,16 @@ export interface RerunAllResponse {
   simulation_ids: string[];
 }
 
+export interface ClearAllMotorsResponse {
+  deleted: number;
+  user_ids: string[];
+}
+
+export interface ClearAllSimulationsResponse {
+  deleted: number;
+  user_ids: string[];
+}
+
 export interface SolidSimulationResults {
   motor_type: "solid";
   simulation_id: string;
@@ -200,6 +210,72 @@ export interface SimulationDetails {
   motor_config: MotorConfig;
   params: IBSimParams;
   results: SimulationResults;
+}
+
+// ---------------------------------------------------------------------------
+// Account, usage, cost
+// ---------------------------------------------------------------------------
+
+// Credit / token state. `monthly_token_limit` and `tokens_remaining` are null
+// for admins (unlimited). `tokens_used` is always populated.
+export interface CreditAccount {
+  monthly_token_limit: number | null;
+  tokens_used: number;
+  tokens_remaining: number | null;
+  usage_period: string;
+}
+
+// For admins, storage *_limit and *_remaining come back null (unlimited).
+// Counts are always populated.
+export interface UsageSnapshot {
+  motor_count: number;
+  motor_limit: number | null;
+  motors_remaining: number | null;
+  simulation_count: number;
+  simulation_limit: number | null;
+  simulations_remaining: number | null;
+  credits: CreditAccount;
+  is_admin: boolean;
+}
+
+export interface AccountSnapshot {
+  user_id: string;
+  motor_limit: number | null;
+  simulation_limit: number | null;
+  credits: CreditAccount;
+  is_admin: boolean;
+  // Populated on admin responses only; null on /me/account.
+  motor_count: number | null;
+  simulation_count: number | null;
+}
+
+export interface EstimateSimulationResponse {
+  estimated_tokens: number;
+  credits: CreditAccount;
+  can_afford: boolean;
+}
+
+export interface CreateSimulationResponse {
+  simulation_id: string;
+  estimated_tokens: number;
+}
+
+export interface SimulationCostRecord {
+  simulation_id: string;
+  estimated_tokens: number;
+  actual_tokens: number | null;
+  iterations: number | null;
+  tokens_charged: number;
+  period: string;
+  created_at: string;
+  completed_at: string | null;
+  refunded: boolean;
+}
+
+export interface UpdateLimitsRequest {
+  motor_limit?: number | null;
+  simulation_limit?: number | null;
+  monthly_token_limit?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -267,10 +343,27 @@ export class ApiClient {
 
   async createSimulation(
     body: CreateSimulationRequest,
-  ): Promise<{ simulation_id: string }> {
-    const { data } = await this.http.post<{ simulation_id: string }>(
+  ): Promise<CreateSimulationResponse> {
+    const { data } = await this.http.post<CreateSimulationResponse>(
       "/simulations",
       body,
+    );
+    return data;
+  }
+
+  async estimateSimulation(
+    body: CreateSimulationRequest,
+  ): Promise<EstimateSimulationResponse> {
+    const { data } = await this.http.post<EstimateSimulationResponse>(
+      "/simulations/estimate",
+      body,
+    );
+    return data;
+  }
+
+  async getSimulationCost(simId: string): Promise<SimulationCostRecord> {
+    const { data } = await this.http.get<SimulationCostRecord>(
+      `/simulations/${simId}/cost`,
     );
     return data;
   }
@@ -309,6 +402,36 @@ export class ApiClient {
     const { data } = await this.http.post<RerunAllResponse>(
       "/admin/simulations/rerun-all",
     );
+    return data;
+  }
+
+  async adminClearAllMotors(userId?: string): Promise<ClearAllMotorsResponse> {
+    const { data } = await this.http.delete<ClearAllMotorsResponse>(
+      "/admin/motors/clear-all",
+      { params: userId ? { user_id: userId } : undefined },
+    );
+    return data;
+  }
+
+  async adminClearAllSimulations(
+    userId?: string,
+  ): Promise<ClearAllSimulationsResponse> {
+    const { data } = await this.http.delete<ClearAllSimulationsResponse>(
+      "/admin/simulations/clear-all",
+      { params: userId ? { user_id: userId } : undefined },
+    );
+    return data;
+  }
+
+  // ── Account / Usage ────────────────────────────────────────────────────────
+
+  async getMyAccount(): Promise<AccountSnapshot> {
+    const { data } = await this.http.get<AccountSnapshot>("/me/account");
+    return data;
+  }
+
+  async getMyUsage(): Promise<UsageSnapshot> {
+    const { data } = await this.http.get<UsageSnapshot>("/me/usage");
     return data;
   }
 
@@ -366,6 +489,24 @@ export class ApiClient {
   async adminDeleteUser(userId: string): Promise<void> {
     await this.http.delete(`/admin/users/${userId}`);
   }
+
+  async adminGetAccount(userId: string): Promise<AccountSnapshot> {
+    const { data } = await this.http.get<AccountSnapshot>(
+      `/admin/users/${userId}/account`,
+    );
+    return data;
+  }
+
+  async adminUpdateLimits(
+    userId: string,
+    body: UpdateLimitsRequest,
+  ): Promise<AccountSnapshot> {
+    const { data } = await this.http.put<AccountSnapshot>(
+      `/admin/users/${userId}/limits`,
+      body,
+    );
+    return data;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -377,14 +518,19 @@ export type UserRole = "admin" | "member";
 export interface UserSummary {
   uid: string;
   email: string | null;
+  email_verified: boolean;
   display_name: string | null;
+  photo_url: string | null;
   disabled: boolean;
   role: UserRole;
+  created_at: string | null;
+  last_sign_in_at: string | null;
 }
 
 export interface ListUsersResponse {
   users: UserSummary[];
   next_page_token: string | null;
+  has_more: boolean;
 }
 
 // ---------------------------------------------------------------------------

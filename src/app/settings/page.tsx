@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { TriangleAlert, Loader2 } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -13,17 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { QuotaPanel } from "@/components/usage/QuotaPanel";
 import { useApiClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -125,6 +118,8 @@ function SettingsPage() {
           </CardContent>
         </Card>
 
+        <QuotaPanel />
+
         <Card className="border-destructive/40">
           <CardHeader>
             <CardTitle className="text-lg text-destructive">
@@ -175,53 +170,36 @@ function SettingsPage() {
         </Card>
       </div>
 
-      <Dialog
+      <CriticalConfirmDialog
         open={clearOpen}
         onOpenChange={(open) => {
           if (!clearing) setClearOpen(open);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear account data?</DialogTitle>
-            <DialogDescription>
-              This permanently deletes every motor and simulation in your
-              account. You will stay signed in.
-            </DialogDescription>
-          </DialogHeader>
-          {error && <ErrorMessage message={error} />}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" disabled={clearing}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={handleClearAccount}
-              disabled={clearing}
-            >
-              {clearing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {clearing ? "Clearing..." : "Clear data"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onConfirm={handleClearAccount}
+        title="Clear account data?"
+        description="This permanently deletes every motor and simulation in your account. You will stay signed in."
+        confirmLabel="Clear data"
+        runningLabel="Clearing..."
+        destructive
+        running={clearing}
+        error={error}
+      />
 
-      <Dialog
+      <CriticalConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (!deleting) setDeleteOpen(open);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete your account?</DialogTitle>
-            <DialogDescription>
-              This permanently deletes your account and all associated data.
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
+        onConfirm={handleDeleteAccount}
+        title="Delete your account?"
+        description="This permanently deletes your account and all associated data. This action cannot be undone."
+        confirmLabel="Delete account"
+        runningLabel="Deleting..."
+        destructive
+        running={deleting}
+        error={error}
+        extraValid={emailConfirm.trim() === user?.email}
+        extraContent={
           <div className="space-y-2">
             <Label htmlFor="confirm-email">
               Type{" "}
@@ -234,28 +212,15 @@ function SettingsPage() {
               autoComplete="off"
               value={emailConfirm}
               onChange={(e) => setEmailConfirm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.preventDefault();
+              }}
               placeholder={user?.email ?? ""}
               disabled={deleting}
             />
           </div>
-          {error && <ErrorMessage message={error} />}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" disabled={deleting}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={deleting || emailConfirm.trim() !== user?.email}
-            >
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {deleting ? "Deleting..." : "Delete account"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+      />
     </AppLayout>
   );
 }
@@ -277,14 +242,6 @@ function DangerRow({
       </div>
       <div className="shrink-0">{action}</div>
     </div>
-  );
-}
-
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-      {message}
-    </p>
   );
 }
 

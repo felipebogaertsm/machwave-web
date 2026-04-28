@@ -10,10 +10,14 @@ import {
 } from "@/lib/api";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { RunSimulationDialog } from "@/components/simulation/RunSimulationDialog";
+import { useActiveSimulation } from "@/components/simulation/useActiveSimulation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { SolidMotorDetailBody } from "@/components/motor/SolidMotorDetailBody";
-import { Loader2, Pencil, Trash2, Play } from "lucide-react";
+import { Activity, Loader2, Pencil, Trash2, Play } from "lucide-react";
 
 export default function MotorDetailPage() {
   return (
@@ -36,11 +40,14 @@ function MotorDetailContent() {
   const motorId = params.id as string;
   const api = useApiClient();
   const router = useRouter();
+  const { activeSim } = useActiveSimulation();
   const [motor, setMotor] = useState<MotorRecord | null>(null);
   const [propellants, setPropellants] = useState<PropellantItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [simulating, setSimulating] = useState(false);
+  const [runOpen, setRunOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,27 +60,15 @@ function MotorDetailContent() {
       .finally(() => setLoading(false));
   }, [motorId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleSimulate() {
-    setSimulating(true);
-    try {
-      const { simulation_id } = await api.createSimulation({
-        motor_id: motorId,
-      });
-      router.push(`/simulations/${simulation_id}`);
-    } catch {
-      setError("Failed to start simulation");
-      setSimulating(false);
-    }
-  }
 
   async function handleDelete() {
-    if (!confirm("Delete this motor? This cannot be undone.")) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await api.deleteMotor(motorId);
       router.replace("/dashboard");
     } catch {
-      setError("Failed to delete motor");
+      setDeleteError("Failed to delete motor");
       setDeleting(false);
     }
   }
@@ -99,13 +94,20 @@ function MotorDetailContent() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={handleSimulate} disabled={simulating}>
-                  {simulating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="mr-2 h-4 w-4" />
-                  )}
-                  {simulating ? "Starting…" : "Run Simulation"}
+                <Button
+                  onClick={() => {
+                    setError(null);
+                    setRunOpen(true);
+                  }}
+                  disabled={activeSim !== null}
+                  title={
+                    activeSim
+                      ? `Blocked — a simulation is already ${activeSim.status}`
+                      : undefined
+                  }
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  Run Simulation
                 </Button>
                 <Button variant="outline" asChild>
                   <Link href={`/motors/${motorId}/edit`}>
@@ -116,7 +118,10 @@ function MotorDetailContent() {
                 <Button
                   variant="destructive"
                   size="icon"
-                  onClick={handleDelete}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setDeleteOpen(true);
+                  }}
                   disabled={deleting}
                   aria-label="Delete motor"
                 >
@@ -135,6 +140,24 @@ function MotorDetailContent() {
               Updated {formatDate(motor.updated_at)}
             </p>
 
+            {activeSim && (
+              <Card className="border-amber-500/40 bg-amber-500/5">
+                <CardContent className="flex flex-wrap items-center gap-3 p-3">
+                  <Activity className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <p className="flex-1 text-sm">
+                    A simulation is{" "}
+                    <span className="font-medium">{activeSim.status}</span>.
+                    New runs are blocked until it finishes.
+                  </p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/simulations/${activeSim.simulation_id}`}>
+                      View active run
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {motor.config.motor_type === "solid" && (
               <SolidMotorDetailBody
                 motor={{ ...motor, config: motor.config }}
@@ -143,6 +166,39 @@ function MotorDetailContent() {
             )}
           </>
         )}
+
+        <RunSimulationDialog
+          open={runOpen}
+          onOpenChange={setRunOpen}
+          request={{ motor_id: motorId }}
+          motorName={motor?.name}
+          onCreated={(res) => {
+            setRunOpen(false);
+            router.push(`/simulations/${res.simulation_id}`);
+          }}
+        />
+
+        <CriticalConfirmDialog
+          open={deleteOpen}
+          onOpenChange={(open) => {
+            if (!deleting) {
+              setDeleteOpen(open);
+              if (!open) setDeleteError(null);
+            }
+          }}
+          onConfirm={handleDelete}
+          title="Delete motor?"
+          description={
+            motor
+              ? `Permanently delete "${motor.name}". This cannot be undone.`
+              : "Permanently delete this motor. This cannot be undone."
+          }
+          confirmLabel="Delete"
+          runningLabel="Deleting..."
+          destructive
+          running={deleting}
+          error={deleteError}
+        />
       </div>
     </AppLayout>
   );

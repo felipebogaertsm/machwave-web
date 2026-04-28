@@ -13,6 +13,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
 import { Activity, Loader2, Trash2 } from "lucide-react";
 
 type SortKey = "motor_name" | "status" | "created_at" | "updated_at";
@@ -53,16 +54,26 @@ function SimulationsContent() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  async function handleDelete(simId: string) {
-    if (!confirm("Delete this simulation? This cannot be undone.")) return;
+  function requestDelete(simId: string) {
+    setDeleteError(null);
+    setPendingDeleteId(simId);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const simId = pendingDeleteId;
     setDeletingId(simId);
+    setDeleteError(null);
     setError(null);
     try {
       await api.deleteSimulation(simId);
       setSims((prev) => prev.filter((s) => s.simulation_id !== simId));
+      setPendingDeleteId(null);
     } catch {
-      setError("Failed to delete simulation.");
+      setDeleteError("Failed to delete simulation.");
     } finally {
       setDeletingId(null);
     }
@@ -142,6 +153,24 @@ function SimulationsContent() {
             </CardContent>
           </Card>
         )}
+
+        <CriticalConfirmDialog
+          open={pendingDeleteId !== null}
+          onOpenChange={(open) => {
+            if (!open && deletingId === null) {
+              setPendingDeleteId(null);
+              setDeleteError(null);
+            }
+          }}
+          onConfirm={confirmDelete}
+          title="Delete simulation?"
+          description="Permanently delete this simulation. This cannot be undone."
+          confirmLabel="Delete"
+          runningLabel="Deleting..."
+          destructive
+          running={deletingId !== null && deletingId === pendingDeleteId}
+          error={deleteError}
+        />
 
         {!loading && sims.length > 0 && (
           <Card>
@@ -236,7 +265,7 @@ function SimulationsContent() {
                               aria-label="Delete simulation"
                               title="Delete"
                               disabled={deletingId === sim.simulation_id}
-                              onClick={() => handleDelete(sim.simulation_id)}
+                              onClick={() => requestDelete(sim.simulation_id)}
                             >
                               {deletingId === sim.simulation_id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />

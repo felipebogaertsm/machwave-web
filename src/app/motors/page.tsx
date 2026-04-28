@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { useApiClient, type MotorSummary } from "@/lib/api";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { RunSimulationDialog } from "@/components/simulation/RunSimulationDialog";
+import { useActiveSimulation } from "@/components/simulation/useActiveSimulation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Flame, Loader2, Pencil, Play, Trash2 } from "lucide-react";
+import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
+import { Activity, Flame, Loader2, Pencil, Play, Trash2 } from "lucide-react";
 
 type SortKey = "name" | "motor_type" | "created_at" | "updated_at";
 type SortDir = "asc" | "desc";
@@ -25,13 +28,22 @@ export default function MotorsPage() {
 function MotorsContent() {
   const api = useApiClient();
   const router = useRouter();
+  const { activeSim } = useActiveSimulation();
   const [motors, setMotors] = useState<MotorSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("updated_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [simulatingId, setSimulatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingRun, setPendingRun] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     api
@@ -40,32 +52,31 @@ function MotorsContent() {
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleDelete(motorId: string, motorName: string) {
-    if (!confirm(`Delete "${motorName}"? This cannot be undone.`)) return;
-    setDeletingId(motorId);
+  function requestDelete(motorId: string, motorName: string) {
+    setDeleteError(null);
+    setPendingDelete({ id: motorId, name: motorName });
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const { id, name } = pendingDelete;
+    setDeletingId(id);
+    setDeleteError(null);
     setError(null);
     try {
-      await api.deleteMotor(motorId);
-      setMotors((prev) => prev.filter((m) => m.motor_id !== motorId));
+      await api.deleteMotor(id);
+      setMotors((prev) => prev.filter((m) => m.motor_id !== id));
+      setPendingDelete(null);
     } catch {
-      setError(`Failed to delete "${motorName}".`);
+      setDeleteError(`Failed to delete "${name}".`);
     } finally {
       setDeletingId(null);
     }
   }
 
-  async function handleSimulate(motorId: string, motorName: string) {
-    setSimulatingId(motorId);
+  function requestSimulate(motorId: string, motorName: string) {
     setError(null);
-    try {
-      const { simulation_id } = await api.createSimulation({
-        motor_id: motorId,
-      });
-      router.push(`/simulations/${simulation_id}`);
-    } catch {
-      setError(`Failed to start simulation for "${motorName}".`);
-      setSimulatingId(null);
-    }
+    setPendingRun({ id: motorId, name: motorName });
   }
 
   function toggleSort(key: SortKey) {
@@ -122,6 +133,59 @@ function MotorsContent() {
         )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {activeSim && (
+          <Card className="border-amber-500/40 bg-amber-500/5">
+            <CardContent className="flex flex-wrap items-center gap-3 p-3">
+              <Activity className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p className="flex-1 text-sm">
+                A simulation is{" "}
+                <span className="font-medium">{activeSim.status}</span>. New
+                runs are blocked until it finishes.
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/simulations/${activeSim.simulation_id}`}>
+                  View active run
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <RunSimulationDialog
+          open={pendingRun !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingRun(null);
+          }}
+          request={pendingRun ? { motor_id: pendingRun.id } : null}
+          motorName={pendingRun?.name}
+          onCreated={(res) => {
+            setPendingRun(null);
+            router.push(`/simulations/${res.simulation_id}`);
+          }}
+        />
+
+        <CriticalConfirmDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open && deletingId === null) {
+              setPendingDelete(null);
+              setDeleteError(null);
+            }
+          }}
+          onConfirm={confirmDelete}
+          title="Delete motor?"
+          description={
+            pendingDelete
+              ? `Permanently delete "${pendingDelete.name}". This cannot be undone.`
+              : ""
+          }
+          confirmLabel="Delete"
+          runningLabel="Deleting..."
+          destructive
+          running={deletingId !== null && deletingId === pendingDelete?.id}
+          error={deleteError}
+        />
 
         {!loading && motors.length > 0 && (
           <Card>
@@ -199,17 +263,17 @@ function MotorsContent() {
                               size="icon"
                               className="text-orange-500 hover:bg-orange-500/10 hover:text-orange-600"
                               aria-label={`Run simulation for ${motor.name}`}
-                              title="Run simulation"
-                              disabled={simulatingId === motor.motor_id}
+                              title={
+                                activeSim
+                                  ? `Blocked — a simulation is already ${activeSim.status}`
+                                  : "Run simulation"
+                              }
+                              disabled={activeSim !== null}
                               onClick={() =>
-                                handleSimulate(motor.motor_id, motor.name)
+                                requestSimulate(motor.motor_id, motor.name)
                               }
                             >
-                              {simulatingId === motor.motor_id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
+                              <Play className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -230,7 +294,7 @@ function MotorsContent() {
                               title="Delete"
                               disabled={deletingId === motor.motor_id}
                               onClick={() =>
-                                handleDelete(motor.motor_id, motor.name)
+                                requestDelete(motor.motor_id, motor.name)
                               }
                             >
                               {deletingId === motor.motor_id ? (

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   useApiClient,
   type MotorRecord,
+  type SimulationCostRecord,
   type SimulationDetails,
 } from "@/lib/api";
 import { useStatusPoller } from "@/components/simulation/useStatusPoller";
@@ -15,7 +16,16 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileJson, Loader2, Trash2 } from "lucide-react";
+import { CriticalConfirmDialog } from "@/components/ui/critical-confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AboutCreditsLink } from "@/components/usage/AboutCreditsLink";
+import { Coins, FileJson, Loader2, Trash2 } from "lucide-react";
 
 function statusVariant(
   status: string,
@@ -52,8 +62,12 @@ function SimulationContent() {
   const [payloadCopied, setPayloadCopied] = useState(false);
   const [reportCopied, setReportCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [cost, setCost] = useState<SimulationCostRecord | null>(null);
+  const [costOpen, setCostOpen] = useState(false);
   const fetchingRef = useRef(false);
+  const costFetchedRef = useRef(false);
 
   // Fetch results once simulation is done
   useEffect(() => {
@@ -64,6 +78,23 @@ function SimulationContent() {
         .then(setDetails)
         .catch(() => {
           fetchingRef.current = false;
+        });
+    }
+  }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch cost record once the run is complete (or failed — refunds are visible)
+  useEffect(() => {
+    if (
+      (status?.status === "done" || status?.status === "failed") &&
+      !cost &&
+      !costFetchedRef.current
+    ) {
+      costFetchedRef.current = true;
+      api
+        .getSimulationCost(simId)
+        .then(setCost)
+        .catch(() => {
+          costFetchedRef.current = false;
         });
     }
   }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -129,8 +160,8 @@ function SimulationContent() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this simulation? This cannot be undone.")) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await api.deleteSimulation(simId);
       router.replace("/dashboard");
@@ -165,7 +196,11 @@ function SimulationContent() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">Simulation</h1>
+            <h1 className="text-2xl font-bold">
+              {simulationKindLabel(
+                motorDetail?.config.motor_type ?? details?.results.motor_type,
+              )}
+            </h1>
             <p className="font-mono text-xs text-muted-foreground">{simId}</p>
             {motorDetail ? (
               <p className="text-sm text-muted-foreground">
@@ -206,11 +241,24 @@ function SimulationContent() {
               <FileJson className="h-4 w-4" />
             </Button>
             <Button
+              variant="outline"
+              size="icon"
+              title={cost ? "Token cost" : "Token cost (available once the run completes)"}
+              aria-label="Show token cost"
+              onClick={() => setCostOpen(true)}
+              disabled={!cost}
+            >
+              <Coins className="h-4 w-4" />
+            </Button>
+            <Button
               variant="destructive"
               size="icon"
               title="Delete simulation"
               aria-label="Delete simulation"
-              onClick={handleDelete}
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteOpen(true);
+              }}
               disabled={deleting}
             >
               {deleting ? (
@@ -299,7 +347,171 @@ function SimulationContent() {
             params={details.params}
           />
         )}
+
+        <CriticalConfirmDialog
+          open={deleteOpen}
+          onOpenChange={(open) => {
+            if (!deleting) {
+              setDeleteOpen(open);
+              if (!open) setDeleteError(null);
+            }
+          }}
+          onConfirm={handleDelete}
+          title="Delete simulation?"
+          description="Permanently delete this simulation. This cannot be undone."
+          confirmLabel="Delete"
+          runningLabel="Deleting..."
+          destructive
+          running={deleting}
+          error={deleteError}
+        />
+
+        <TokenCostModal
+          open={costOpen}
+          onOpenChange={setCostOpen}
+          cost={cost}
+          failed={status?.status === "failed"}
+        />
       </div>
     </AppLayout>
+  );
+}
+
+function simulationKindLabel(motorType: string | undefined): string {
+  if (motorType === "solid") return "Solid Simulation";
+  if (motorType === "liquid") return "Liquid Simulation";
+  if (motorType === "hybrid") return "Hybrid Simulation";
+  return "Simulation";
+}
+
+function TokenCostModal({
+  open,
+  onOpenChange,
+  cost,
+  failed,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  cost: SimulationCostRecord | null;
+  failed: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Coins className="h-4 w-4" />
+            Token cost
+          </DialogTitle>
+          <DialogDescription>
+            What this run consumed against your monthly token allowance.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!cost ? (
+          <p className="text-sm text-muted-foreground">
+            The cost record is created when the run completes.
+          </p>
+        ) : (
+          <CostBody cost={cost} failed={failed} />
+        )}
+
+        <div className="flex justify-end pt-1">
+          <AboutCreditsLink />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CostBody({
+  cost,
+  failed,
+}: {
+  cost: SimulationCostRecord;
+  failed: boolean;
+}) {
+  const settled = cost.actual_tokens != null;
+  const delta =
+    cost.actual_tokens != null
+      ? cost.actual_tokens - cost.estimated_tokens
+      : null;
+  return (
+    <div className="space-y-3 text-sm">
+      {cost.refunded && (
+        <span className="inline-block rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+          Refunded
+        </span>
+      )}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Metric
+          label="Estimated"
+          value={`${cost.estimated_tokens.toLocaleString()} tokens`}
+        />
+        <Metric
+          label="Actual"
+          value={
+            settled ? `${cost.actual_tokens!.toLocaleString()} tokens` : "—"
+          }
+          sub={
+            delta != null ? (
+              <span
+                className={
+                  delta === 0
+                    ? "text-muted-foreground"
+                    : delta < 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-600 dark:text-amber-400"
+                }
+              >
+                {delta > 0 ? "+" : ""}
+                {delta.toLocaleString()} vs estimate
+              </span>
+            ) : null
+          }
+        />
+        <Metric
+          label="Iterations"
+          value={
+            cost.iterations != null ? cost.iterations.toLocaleString() : "—"
+          }
+        />
+        <Metric
+          label="Period"
+          value={<span className="font-mono">{cost.period}</span>}
+        />
+      </div>
+      <div className="grid grid-cols-1 border-t pt-3">
+        <Metric
+          label="Tokens charged"
+          value={`${cost.tokens_charged.toLocaleString()} tokens`}
+        />
+      </div>
+      {failed && !cost.refunded && (
+        <p className="text-xs text-muted-foreground">
+          The run failed. The pre-charge will be refunded automatically.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p className="font-medium tabular-nums">{value}</p>
+      {sub && <p className="text-[11px]">{sub}</p>}
+    </div>
   );
 }

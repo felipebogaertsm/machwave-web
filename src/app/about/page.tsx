@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { Coins, ExternalLink } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -44,6 +44,50 @@ function AboutPage() {
                 <ExternalAnchor href={AUTHOR_URL}>{AUTHOR_URL}</ExternalAnchor>
               </dd>
             </dl>
+          </CardContent>
+        </Card>
+
+        <Card id="credits" className="scroll-mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Coins className="h-4 w-4" />
+              Credits &amp; limits
+            </CardTitle>
+            <CardDescription>
+              I&rsquo;d love this all to be free! Unfortunately, cloud computing
+              costs money. For this reason, a token-based system is in place to
+              keep things sustainable.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Each simulation consumes{" "}
+              <span className="text-foreground">machwave tokens</span>, settled
+              after the run completes. Failed runs are refunded automatically,
+              so you only pay for compute that actually ran.
+            </p>
+            <ul className="space-y-2">
+              <CreditsBullet
+                term="Monthly grant"
+                detail="10,000 tokens per account. Resets on the 1st of every month (UTC). Use it or lose it — the balance does not roll over."
+              />
+              <CreditsBullet
+                term="Storage caps"
+                detail="Up to 10 motors and 10 simulations per account. Delete one to make room."
+              />
+              <CreditsBullet
+                term="Submission gate"
+                detail="Each run is pre-charged from a heuristic estimate. If your remaining balance is less than the estimate, submission is blocked."
+              />
+              <CreditsBullet
+                term="Reconciliation"
+                detail="The worker writes back the actual cost when the run finishes. Differences vs. the estimate are reflected in the per-simulation token cost."
+              />
+              <CreditsBullet
+                term="Admins"
+                detail="Bypass all caps and balances. Their token usage is still tracked, but never gates submission."
+              />
+            </ul>
           </CardContent>
         </Card>
 
@@ -110,6 +154,15 @@ function ExternalAnchor({
       {children}
       <ExternalLink className="h-3.5 w-3.5" />
     </a>
+  );
+}
+
+function CreditsBullet({ term, detail }: { term: string; detail: string }) {
+  return (
+    <li className="grid grid-cols-[max-content_1fr] gap-x-3">
+      <span className="font-medium text-foreground">{term}</span>
+      <span>{detail}</span>
+    </li>
   );
 }
 
