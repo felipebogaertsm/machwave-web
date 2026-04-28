@@ -307,7 +307,7 @@ export class ApiClient {
 
   async rerunAllSimulations(): Promise<RerunAllResponse> {
     const { data } = await this.http.post<RerunAllResponse>(
-      "/simulations/rerun-all",
+      "/admin/simulations/rerun-all",
     );
     return data;
   }
@@ -328,6 +328,63 @@ export class ApiClient {
   async deleteAccount(userId: string, email: string): Promise<void> {
     await this.http.delete(`/users/${userId}`, { data: { email } });
   }
+
+  // ── Admin: Users ───────────────────────────────────────────────────────────
+
+  async adminListUsers(params?: {
+    pageToken?: string;
+    maxResults?: number;
+  }): Promise<ListUsersResponse> {
+    const { data } = await this.http.get<ListUsersResponse>("/admin/users", {
+      params: {
+        page_token: params?.pageToken,
+        max_results: params?.maxResults,
+      },
+    });
+    return data;
+  }
+
+  async adminSetRole(userId: string, role: UserRole): Promise<UserSummary> {
+    const { data } = await this.http.put<UserSummary>(
+      `/admin/users/${userId}/role`,
+      { role },
+    );
+    return data;
+  }
+
+  async adminSetDisabled(
+    userId: string,
+    disabled: boolean,
+  ): Promise<UserSummary> {
+    const { data } = await this.http.put<UserSummary>(
+      `/admin/users/${userId}/disabled`,
+      { disabled },
+    );
+    return data;
+  }
+
+  async adminDeleteUser(userId: string): Promise<void> {
+    await this.http.delete(`/admin/users/${userId}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin: Users
+// ---------------------------------------------------------------------------
+
+export type UserRole = "admin" | "member";
+
+export interface UserSummary {
+  uid: string;
+  email: string | null;
+  display_name: string | null;
+  disabled: boolean;
+  role: UserRole;
+}
+
+export interface ListUsersResponse {
+  users: UserSummary[];
+  next_page_token: string | null;
 }
 
 // ---------------------------------------------------------------------------

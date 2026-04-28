@@ -24,6 +24,7 @@ import {
 import { useApiClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { HealthCheckCard } from "@/components/admin/HealthCheckCard";
+import { UsersAdminCard } from "@/components/admin/UsersAdminCard";
 
 type RerunStatus =
   | { kind: "idle" }
@@ -122,6 +123,8 @@ function AdminPage() {
             <RerunStatusBanner status={status} />
           </CardContent>
         </Card>
+
+        <UsersAdminCard />
       </div>
 
       <Dialog
