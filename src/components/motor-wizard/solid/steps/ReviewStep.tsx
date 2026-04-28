@@ -1,9 +1,9 @@
 "use client";
 
-import type { MotorForm } from "@/lib/validations";
+import type { SolidMotorForm } from "@/lib/validations";
 
 interface Props {
-  data: MotorForm;
+  data: SolidMotorForm;
 }
 
 function Row({ label, value }: { label: string; value: string | number }) {

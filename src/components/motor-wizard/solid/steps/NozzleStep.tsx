@@ -6,18 +6,18 @@ import {
   type FieldErrors,
   type FieldPath,
 } from "react-hook-form";
-import type { MotorForm } from "@/lib/validations";
+import type { SolidMotorForm } from "@/lib/validations";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface Props {
-  control: Control<MotorForm>;
-  errors: FieldErrors<MotorForm>;
+  control: Control<SolidMotorForm>;
+  errors: FieldErrors<SolidMotorForm>;
 }
 
 const fields: {
   label: string;
-  name: keyof NonNullable<MotorForm["config"]["thrust_chamber"]["nozzle"]>;
+  name: keyof SolidMotorForm["config"]["thrust_chamber"]["nozzle"];
   step?: string;
 }[] = [
   { label: "Inlet Diameter (mm)", name: "inlet_diameter", step: "0.1" },
@@ -39,7 +39,7 @@ export function NozzleStep({ control, errors }: Props) {
             <Label className="text-sm">{label}</Label>
             <Controller
               name={
-                `config.thrust_chamber.nozzle.${name}` as FieldPath<MotorForm>
+                `config.thrust_chamber.nozzle.${name}` as FieldPath<SolidMotorForm>
               }
               control={control}
               render={({ field }) => (

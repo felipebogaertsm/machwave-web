@@ -11,13 +11,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type { SimulationResults } from "@/lib/api";
+import type { SolidSimulationResults } from "@/lib/api";
 import { paToMpa } from "@/lib/units";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, Image as ImageIcon } from "lucide-react";
 
 interface Props {
-  results: SimulationResults;
+  results: SolidSimulationResults;
 }
 
 type View =
@@ -137,7 +137,7 @@ function exportChartPng(container: HTMLElement | null, filename: string) {
   img.src = svgUrl;
 }
 
-export function SimulationResultsChart({ results }: Props) {
+export function SolidResultsChart({ results }: Props) {
   const [view, setView] = useState<View>("thrust_pressure");
   const chartRef = useRef<HTMLDivElement>(null);
 

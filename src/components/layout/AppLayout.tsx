@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   BookOpen,
   Flame,
   Info,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { NewMotorAccordion } from "@/components/motor/NewMotorAccordion";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -32,7 +34,8 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/motors/new", label: "New Motor", icon: Flame },
+  { href: "/motors", label: "Motors", icon: Flame },
+  { href: "/simulations", label: "Simulations", icon: Activity },
   {
     href: "https://felipebogaertsm.github.io/machwave/",
     label: "Documentation",
@@ -56,6 +59,10 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
       <Separator />
       <nav className="flex-1 space-y-1 p-3">
+        <NewMotorAccordion
+          itemClassName={navItemClass}
+          onNavigate={onNavClick}
+        />
         {navItems.map(({ href, label, icon: Icon, external }) => {
           const className = cn(
             navItemClass,

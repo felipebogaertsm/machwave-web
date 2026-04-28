@@ -6,13 +6,13 @@ import {
   type FieldErrors,
   type FieldPath,
 } from "react-hook-form";
-import type { MotorForm } from "@/lib/validations";
+import type { SolidMotorForm } from "@/lib/validations";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface Props {
-  control: Control<MotorForm>;
-  errors: FieldErrors<MotorForm>;
+  control: Control<SolidMotorForm>;
+  errors: FieldErrors<SolidMotorForm>;
 }
 
 const chamberFields = [
@@ -45,7 +45,7 @@ export function ChamberStep({ control, errors }: Props) {
               <Label className="text-sm">{label}</Label>
               <Controller
                 name={
-                  `config.thrust_chamber.combustion_chamber.${name}` as FieldPath<MotorForm>
+                  `config.thrust_chamber.combustion_chamber.${name}` as FieldPath<SolidMotorForm>
                 }
                 control={control}
                 render={({ field }) => (

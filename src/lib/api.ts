@@ -3,69 +3,117 @@
  *
  * All methods attach the current user's Firebase ID token as a Bearer token.
  * Import `useApiClient` in components/hooks to get an authenticated instance.
+ *
+ * Type design notes
+ * -----------------
+ * The backend models motor configs and simulation results as discriminated
+ * unions on `motor_type`. Today only "solid" is implemented client-side; when
+ * "liquid" (or "hybrid") variants are added, they slot into the unions
+ * (`MotorConfig`, `SimulationResults`) with their own `motor_type` literal —
+ * no plumbing changes required in callers that already narrow on it.
  */
 import axios, { type AxiosInstance } from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
-// Type definitions — mirror the Pydantic response models
+// Discriminator
+// ---------------------------------------------------------------------------
+
+export type MotorType = "solid";
+
+// ---------------------------------------------------------------------------
+// Propellants
 // ---------------------------------------------------------------------------
 
 export interface PropellantItem {
   id: string;
   name: string;
+  motor_type: MotorType;
 }
+
+// ---------------------------------------------------------------------------
+// Solid motor config
+// ---------------------------------------------------------------------------
+
+export interface BatesSegment {
+  type: "bates";
+  outer_diameter: number;
+  core_diameter: number;
+  length: number;
+  density_ratio: number;
+}
+
+export type GrainSegment = BatesSegment;
+
+export interface SolidGrain {
+  segments: GrainSegment[];
+  spacing: number;
+}
+
+export interface Nozzle {
+  inlet_diameter: number;
+  throat_diameter: number;
+  divergent_angle: number;
+  convergent_angle: number;
+  expansion_ratio: number;
+  c_1: number;
+  c_2: number;
+}
+
+export interface CombustionChamber {
+  casing_inner_diameter: number;
+  casing_outer_diameter: number;
+  internal_length: number;
+  thermal_liner_thickness: number;
+}
+
+export interface SolidMotorThrustChamber {
+  nozzle: Nozzle;
+  combustion_chamber: CombustionChamber;
+  dry_mass: number;
+  nozzle_exit_to_grain_port_distance: number;
+  center_of_gravity_coordinate: [number, number, number] | null;
+}
+
+export interface SolidMotorConfig {
+  motor_type: "solid";
+  propellant_id: string;
+  grain: SolidGrain;
+  thrust_chamber: SolidMotorThrustChamber;
+}
+
+// Discriminated union — extend with `| LiquidEngineConfig` when LRE lands.
+export type MotorConfig = SolidMotorConfig;
+
+// ---------------------------------------------------------------------------
+// Motor records
+// ---------------------------------------------------------------------------
 
 export interface MotorSummary {
   motor_id: string;
   name: string;
+  motor_type: MotorType;
   created_at: string;
   updated_at: string;
 }
 
-export interface SolidMotorConfig {
-  propellant_id: string;
-  grain: {
-    segments: Array<{
-      type: "bates";
-      outer_diameter: number;
-      core_diameter: number;
-      length: number;
-      density_ratio: number;
-    }>;
-    spacing: number;
-  };
-  thrust_chamber: {
-    nozzle: {
-      inlet_diameter: number;
-      throat_diameter: number;
-      divergent_angle: number;
-      convergent_angle: number;
-      expansion_ratio: number;
-      c_1: number;
-      c_2: number;
-    };
-    combustion_chamber: {
-      casing_inner_diameter: number;
-      casing_outer_diameter: number;
-      internal_length: number;
-      thermal_liner_thickness: number;
-    };
-    dry_mass: number;
-    nozzle_exit_to_grain_port_distance: number;
-    center_of_gravity_coordinate: [number, number, number] | null;
-  };
-}
-
-export interface MotorDetail extends MotorSummary {
-  config: SolidMotorConfig;
+export interface MotorRecord {
+  motor_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  config: MotorConfig;
 }
 
 export interface CreateMotorRequest {
   name: string;
-  config: SolidMotorConfig;
+  config: MotorConfig;
 }
+
+// ---------------------------------------------------------------------------
+// Simulations
+// ---------------------------------------------------------------------------
 
 export interface IBSimParams {
   d_t?: number;
@@ -100,7 +148,8 @@ export interface RerunAllResponse {
   simulation_ids: string[];
 }
 
-export interface SimulationResults {
+export interface SolidSimulationResults {
+  motor_type: "solid";
   simulation_id: string;
   t: number[];
   thrust: number[];
@@ -142,10 +191,13 @@ export interface SimulationResults {
   burn_profile: string;
 }
 
+// Discriminated union — extend with `| LiquidSimulationResults` when LRE lands.
+export type SimulationResults = SolidSimulationResults;
+
 export interface SimulationDetails {
   simulation_id: string;
   motor_id: string;
-  motor_config: SolidMotorConfig;
+  motor_config: MotorConfig;
   params: IBSimParams;
   results: SimulationResults;
 }
@@ -191,16 +243,16 @@ export class ApiClient {
     return data;
   }
 
-  async getMotor(motorId: string): Promise<MotorDetail> {
-    const { data } = await this.http.get<MotorDetail>(`/motors/${motorId}`);
+  async getMotor(motorId: string): Promise<MotorRecord> {
+    const { data } = await this.http.get<MotorRecord>(`/motors/${motorId}`);
     return data;
   }
 
   async updateMotor(
     motorId: string,
     body: Partial<CreateMotorRequest>,
-  ): Promise<MotorDetail> {
-    const { data } = await this.http.put<MotorDetail>(
+  ): Promise<MotorRecord> {
+    const { data } = await this.http.put<MotorRecord>(
       `/motors/${motorId}`,
       body,
     );

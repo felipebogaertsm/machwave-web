@@ -1,10 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, type FieldPath } from "react-hook-form";
+import {
+  useForm,
+  type Control,
+  type FieldErrors,
+  type FieldPath,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { motorFormSchema, type MotorForm } from "@/lib/validations";
+import {
+  motorFormSchema,
+  type MotorForm,
+  type SolidMotorForm,
+} from "@/lib/validations";
 import { useApiClient } from "@/lib/api";
 import { toMotorApiConfig } from "@/lib/units";
 import { Button } from "@/components/ui/button";
@@ -16,10 +25,14 @@ import { ReviewStep } from "./steps/ReviewStep";
 
 // ---------------------------------------------------------------------------
 // Default values — KNSB_NAKKA / Olympus-like 2-segment motor
+//
+// Solid-only for now. When liquid lands, the wizard will branch on motor_type
+// (likely via a leading "Motor Type" step) and pick the right defaults.
 // ---------------------------------------------------------------------------
-const DEFAULT_VALUES: MotorForm = {
+const DEFAULT_VALUES: SolidMotorForm = {
   name: "",
   config: {
+    motor_type: "solid",
     propellant_id: "KNSB_NAKKA",
     grain: {
       segments: [
@@ -65,7 +78,7 @@ type StepName = (typeof STEPS)[number];
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function MotorWizard() {
+export function SolidMotorWizard() {
   const router = useRouter();
   const api = useApiClient();
   const [stepIndex, setStepIndex] = useState(0);
@@ -86,8 +99,13 @@ export function MotorWizard() {
     formState: { errors },
   } = form;
 
+  // The wizard is solid-only today; narrow control/errors so step components
+  // can author against `SolidMotorForm` paths without union-narrowing noise.
+  const solidControl = control as unknown as Control<SolidMotorForm>;
+  const solidErrors = errors as FieldErrors<SolidMotorForm>;
+
   // Field paths to validate per step (for early step validation)
-  const stepFields: Record<StepName, FieldPath<MotorForm>[]> = {
+  const stepFields: Record<StepName, FieldPath<SolidMotorForm>[]> = {
     Propellant: ["name", "config.propellant_id"],
     Grain: ["config.grain"],
     Nozzle: ["config.thrust_chamber.nozzle"],
@@ -102,7 +120,9 @@ export function MotorWizard() {
   const isLastStep = stepIndex === STEPS.length - 1;
 
   async function goNext() {
-    const valid = await trigger(stepFields[currentStep]);
+    const valid = await trigger(
+      stepFields[currentStep] as FieldPath<MotorForm>[],
+    );
     if (valid) setStepIndex((i) => i + 1);
   }
 
@@ -153,18 +173,20 @@ export function MotorWizard() {
         className="space-y-6"
       >
         {currentStep === "Propellant" && (
-          <PropellantStep control={control} errors={errors} />
+          <PropellantStep control={solidControl} errors={solidErrors} />
         )}
         {currentStep === "Grain" && (
-          <GrainStep control={control} errors={errors} />
+          <GrainStep control={solidControl} errors={solidErrors} />
         )}
         {currentStep === "Nozzle" && (
-          <NozzleStep control={control} errors={errors} />
+          <NozzleStep control={solidControl} errors={solidErrors} />
         )}
         {currentStep === "Chamber" && (
-          <ChamberStep control={control} errors={errors} />
+          <ChamberStep control={solidControl} errors={solidErrors} />
         )}
-        {currentStep === "Review" && <ReviewStep data={getValues()} />}
+        {currentStep === "Review" && (
+          <ReviewStep data={getValues() as SolidMotorForm} />
+        )}
 
         {serverError && (
           <p className="text-sm text-destructive">{serverError}</p>

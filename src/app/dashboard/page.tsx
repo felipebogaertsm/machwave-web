@@ -9,10 +9,10 @@ import {
 } from "@/lib/api";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
+import { NewMotorButton } from "@/components/motor/NewMotorButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Flame, Activity, ChevronRight } from "lucide-react";
+import { Flame, Activity, ChevronRight } from "lucide-react";
 
 function statusVariant(
   status: SimulationSummary["status"],
@@ -57,12 +57,7 @@ function DashboardContent() {
       <div className="mx-auto max-w-5xl space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">dashboard</h1>
-          <Button asChild>
-            <Link href="/motors/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Motor
-            </Link>
-          </Button>
+          <NewMotorButton />
         </div>
 
         {/* Motors */}
@@ -79,15 +74,7 @@ function DashboardContent() {
             </h2>
           </div>
           {motors.length === 0 && !loading && (
-            <p className="text-sm text-muted-foreground">
-              No motors yet.{" "}
-              <Link
-                href="/motors/new"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                Create your first motor.
-              </Link>
-            </p>
+            <p className="text-sm text-muted-foreground">No motors yet.</p>
           )}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {loading
@@ -114,9 +101,14 @@ function DashboardContent() {
                           <Flame className="h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {motor.name}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-medium">
+                              {motor.name}
+                            </p>
+                            <Badge variant="secondary" className="text-[10px]">
+                              {motor.motor_type.toUpperCase()}
+                            </Badge>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             Updated{" "}
                             {new Date(motor.updated_at).toLocaleDateString()}

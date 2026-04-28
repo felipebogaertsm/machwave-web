@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Controller, type Control } from "react-hook-form";
-import type { MotorForm } from "@/lib/validations";
+import type { SolidMotorForm } from "@/lib/validations";
 import { useApiClient } from "@/lib/api";
 import type { PropellantItem } from "@/lib/api";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
 interface Props {
-  control: Control<MotorForm>;
+  control: Control<SolidMotorForm>;
   errors: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
@@ -21,7 +21,7 @@ export function PropellantStep({ control, errors }: Props) {
   useEffect(() => {
     api
       .listPropellants()
-      .then(setPropellants)
+      .then((items) => setPropellants(items.filter((p) => p.motor_type === "solid")))
       .catch(() => setLoadError("Failed to load propellants"));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

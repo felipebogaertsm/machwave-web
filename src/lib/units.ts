@@ -6,7 +6,7 @@
  * here so no magic numbers appear elsewhere in the codebase.
  */
 
-import type { SolidMotorConfig } from "@/lib/validations";
+import type { MotorConfig, SolidMotorConfig } from "@/lib/validations";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -33,11 +33,12 @@ export const fractionToPercent = (v: number): number => v * 100;
 // ---------------------------------------------------------------------------
 // Motor config payload transform
 //
-// Accepts a config where lengths are in mm and density_ratio is in %.
-// Returns a config in SI units (m, fraction) suitable for the API.
+// Accepts a UI-shaped config (mm, %) and returns SI for the API.
+// Dispatches on `motor_type`; new variants (liquid, hybrid) get their own
+// branch here.
 // ---------------------------------------------------------------------------
 
-export function toMotorApiConfig(config: SolidMotorConfig): SolidMotorConfig {
+function solidConfigToApi(config: SolidMotorConfig): SolidMotorConfig {
   return {
     ...config,
     grain: {
@@ -79,6 +80,13 @@ export function toMotorApiConfig(config: SolidMotorConfig): SolidMotorConfig {
       ),
     },
   };
+}
+
+export function toMotorApiConfig(config: MotorConfig): MotorConfig {
+  switch (config.motor_type) {
+    case "solid":
+      return solidConfigToApi(config);
+  }
 }
 
 // ---------------------------------------------------------------------------

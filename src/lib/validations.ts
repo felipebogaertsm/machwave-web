@@ -1,6 +1,10 @@
 /**
  * Zod validation schemas for motor and simulation forms.
  * These mirror the Pydantic v2 schemas in machwave-api exactly.
+ *
+ * Motor configs are modelled as a discriminated union on `motor_type`.
+ * Today only "solid" exists; adding "liquid" is a matter of writing a new
+ * config schema and appending it to `motorConfigSchema` / `motorFormSchema`.
  */
 import { z } from "zod";
 
@@ -105,10 +109,10 @@ export const combustionChamberSchema = z
 export type CombustionChamber = z.infer<typeof combustionChamberSchema>;
 
 // ---------------------------------------------------------------------------
-// Thrust chamber
+// Solid motor — thrust chamber + config
 // ---------------------------------------------------------------------------
 
-export const thrustChamberSchema = z.object({
+export const solidMotorThrustChamberSchema = z.object({
   nozzle: nozzleSchema,
   combustion_chamber: combustionChamberSchema,
   dry_mass: z.number().positive().describe("Dry mass [kg]"),
@@ -122,26 +126,45 @@ export const thrustChamberSchema = z.object({
     .describe("CoG (x, y, z) from nozzle exit [m]"),
 });
 
-export type ThrustChamber = z.infer<typeof thrustChamberSchema>;
-
-// ---------------------------------------------------------------------------
-// Motor
-// ---------------------------------------------------------------------------
+export type SolidMotorThrustChamber = z.infer<
+  typeof solidMotorThrustChamberSchema
+>;
 
 export const solidMotorConfigSchema = z.object({
+  motor_type: z.literal("solid"),
   propellant_id: z.string().min(1, "Select a propellant"),
   grain: grainSchema,
-  thrust_chamber: thrustChamberSchema,
+  thrust_chamber: solidMotorThrustChamberSchema,
 });
 
 export type SolidMotorConfig = z.infer<typeof solidMotorConfigSchema>;
 
+// ---------------------------------------------------------------------------
+// Motor config — discriminated union
+//
+// Extend with `liquidMotorConfigSchema` (and a "liquid" literal) when LRE
+// support lands. `MotorConfig` and `motorFormSchema` will narrow correctly.
+// ---------------------------------------------------------------------------
+
+export const motorConfigSchema = z.discriminatedUnion("motor_type", [
+  solidMotorConfigSchema,
+]);
+
+export type MotorConfig = z.infer<typeof motorConfigSchema>;
+
 export const motorFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Max 100 characters"),
-  config: solidMotorConfigSchema,
+  config: motorConfigSchema,
 });
 
 export type MotorForm = z.infer<typeof motorFormSchema>;
+
+/**
+ * Form shape when the wizard is locked to solid. Until we add a motor-type
+ * selection step, the wizard authors against this narrowed view to keep
+ * react-hook-form paths fully typed.
+ */
+export type SolidMotorForm = MotorForm & { config: SolidMotorConfig };
 
 // ---------------------------------------------------------------------------
 // Simulation parameters

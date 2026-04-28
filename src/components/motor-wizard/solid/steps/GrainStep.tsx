@@ -8,7 +8,7 @@ import {
   type FieldErrors,
   type FieldPath,
 } from "react-hook-form";
-import type { MotorForm } from "@/lib/validations";
+import type { SolidMotorForm } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, Plus, Trash2 } from "lucide-react";
 
 interface Props {
-  control: Control<MotorForm>;
-  errors: FieldErrors<MotorForm>;
+  control: Control<SolidMotorForm>;
+  errors: FieldErrors<SolidMotorForm>;
 }
 
 export function GrainStep({ control, errors }: Props) {
@@ -64,7 +64,7 @@ export function GrainStep({ control, errors }: Props) {
             <SegmentField
               label="Outer Diameter (mm)"
               name={
-                `config.grain.segments.${index}.outer_diameter` as FieldPath<MotorForm>
+                `config.grain.segments.${index}.outer_diameter` as FieldPath<SolidMotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.outer_diameter}
               control={control}
@@ -73,7 +73,7 @@ export function GrainStep({ control, errors }: Props) {
             <SegmentField
               label="Core Diameter (mm)"
               name={
-                `config.grain.segments.${index}.core_diameter` as FieldPath<MotorForm>
+                `config.grain.segments.${index}.core_diameter` as FieldPath<SolidMotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.core_diameter}
               control={control}
@@ -82,7 +82,7 @@ export function GrainStep({ control, errors }: Props) {
             <SegmentField
               label="Length (mm)"
               name={
-                `config.grain.segments.${index}.length` as FieldPath<MotorForm>
+                `config.grain.segments.${index}.length` as FieldPath<SolidMotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.length}
               control={control}
@@ -91,7 +91,7 @@ export function GrainStep({ control, errors }: Props) {
             <SegmentField
               label="Density Ratio (%)"
               name={
-                `config.grain.segments.${index}.density_ratio` as FieldPath<MotorForm>
+                `config.grain.segments.${index}.density_ratio` as FieldPath<SolidMotorForm>
               }
               error={errors?.config?.grain?.segments?.[index]?.density_ratio}
               control={control}
@@ -165,9 +165,9 @@ function SegmentField({
   step = "any",
 }: {
   label: string;
-  name: FieldPath<MotorForm>;
+  name: FieldPath<SolidMotorForm>;
   error?: { message?: string };
-  control: Control<MotorForm>;
+  control: Control<SolidMotorForm>;
   step?: string;
 }) {
   return (

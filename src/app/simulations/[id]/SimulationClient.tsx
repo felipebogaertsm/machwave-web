@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   useApiClient,
-  type MotorDetail,
+  type MotorRecord,
   type SimulationDetails,
 } from "@/lib/api";
 import { useStatusPoller } from "@/components/simulation/useStatusPoller";
-import { SimulationResultsChart } from "@/components/simulation/SimulationResultsChart";
+import { SolidSimulationView } from "@/components/simulation/solid/SolidSimulationView";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileJson, Trash2 } from "lucide-react";
-import { fractionToPercent, paToMpa } from "@/lib/units";
 
 function statusVariant(
   status: string,
@@ -31,72 +30,6 @@ function statusVariant(
     default:
       return "secondary";
   }
-}
-
-function formatMetric(value: number): string {
-  if (value === 0) return "0";
-  const abs = Math.abs(value);
-  let digits: number;
-  if (abs >= 1000) digits = 0;
-  else if (abs >= 100) digits = 1;
-  else if (abs >= 10) digits = 2;
-  else if (abs >= 1) digits = 3;
-  else if (abs >= 0.01) digits = 4;
-  else digits = 6;
-  return value.toLocaleString("en-US", {
-    maximumFractionDigits: digits,
-    minimumFractionDigits: 0,
-    useGrouping: true,
-  });
-}
-
-function StatGroup({
-  title,
-  children,
-  columnsClassName = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  className,
-}: {
-  title: string;
-  children: ReactNode;
-  columnsClassName?: string;
-  className?: string;
-}) {
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <dl className={`grid gap-x-6 gap-y-2 text-sm ${columnsClassName}`}>
-          {children}
-        </dl>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: number | string;
-  unit?: string;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-border/50 py-1">
-      <dt className="truncate text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums font-medium">
-        {typeof value === "number" ? formatMetric(value) : value}
-        {unit ? (
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            {unit}
-          </span>
-        ) : null}
-      </dd>
-    </div>
-  );
 }
 
 export default function SimulationPage() {
@@ -114,7 +47,7 @@ function SimulationContent() {
   const api = useApiClient();
   const { status, error: pollError } = useStatusPoller(simId);
   const [details, setDetails] = useState<SimulationDetails | null>(null);
-  const [motorDetail, setMotorDetail] = useState<MotorDetail | null>(null);
+  const [motorDetail, setMotorDetail] = useState<MotorRecord | null>(null);
   const [motorDetailError, setMotorDetailError] = useState(false);
   const [payloadCopied, setPayloadCopied] = useState(false);
   const [reportCopied, setReportCopied] = useState(false);
@@ -344,136 +277,12 @@ function SimulationContent() {
           </Card>
         )}
 
-        {/* Results */}
-        {details && (
-          <>
-            {/* Chart + Performance side-by-side on xl */}
-            <div className="grid gap-6 xl:grid-cols-3">
-              <Card className="xl:col-span-2">
-                <CardContent className="pt-6">
-                  <SimulationResultsChart results={details.results} />
-                </CardContent>
-              </Card>
-
-              <StatGroup
-                title="Performance"
-                columnsClassName="grid-cols-2 sm:grid-cols-3 xl:grid-cols-1"
-              >
-                <Stat
-                  label="Total Impulse"
-                  value={details.results.total_impulse}
-                  unit="N·s"
-                />
-                <Stat
-                  label="Specific Impulse"
-                  value={details.results.specific_impulse}
-                  unit="s"
-                />
-                <Stat
-                  label="Max Thrust"
-                  value={details.results.max_thrust}
-                  unit="N"
-                />
-                <Stat
-                  label="Avg Thrust"
-                  value={details.results.avg_thrust}
-                  unit="N"
-                />
-                <Stat
-                  label="Thrust Time"
-                  value={details.results.thrust_time}
-                  unit="s"
-                />
-                <Stat
-                  label="Burn Time"
-                  value={details.results.burn_time}
-                  unit="s"
-                />
-                <Stat
-                  label="Initial Propellant Mass"
-                  value={details.results.initial_propellant_mass}
-                  unit="kg"
-                />
-                <Stat
-                  label="Burn Profile"
-                  value={details.results.burn_profile}
-                />
-              </StatGroup>
-            </div>
-
-            <StatGroup title="Pressure & Efficiency">
-              <Stat
-                label="Max Chamber P"
-                value={paToMpa(details.results.max_chamber_pressure)}
-                unit="MPa"
-              />
-              <Stat
-                label="Avg Chamber P"
-                value={paToMpa(details.results.avg_chamber_pressure)}
-                unit="MPa"
-              />
-              <Stat
-                label="Avg Nozzle Eff."
-                value={fractionToPercent(
-                  details.results.avg_nozzle_efficiency,
-                )}
-                unit="%"
-              />
-              <Stat
-                label="Avg Overall Eff."
-                value={fractionToPercent(
-                  details.results.avg_overall_efficiency,
-                )}
-                unit="%"
-              />
-              <Stat
-                label="Volumetric Eff."
-                value={fractionToPercent(details.results.volumetric_efficiency)}
-                unit="%"
-              />
-              <Stat
-                label="Max Mass Flux"
-                value={details.results.max_mass_flux}
-                unit="kg/(s·m²)"
-              />
-            </StatGroup>
-
-            <StatGroup title="Klemmung (Kn)">
-              <Stat label="Mean Kn" value={details.results.mean_klemmung} />
-              <Stat label="Max Kn" value={details.results.max_klemmung} />
-              <Stat
-                label="Initial / Final Kn"
-                value={details.results.initial_to_final_klemmung_ratio}
-              />
-            </StatGroup>
-
-            <StatGroup title="Simulation Parameters">
-              {details.params.d_t !== undefined && (
-                <Stat label="Time Step" value={details.params.d_t} unit="s" />
-              )}
-              {details.params.igniter_pressure !== undefined && (
-                <Stat
-                  label="Igniter P"
-                  value={paToMpa(details.params.igniter_pressure)}
-                  unit="MPa"
-                />
-              )}
-              {details.params.external_pressure !== undefined && (
-                <Stat
-                  label="External P"
-                  value={paToMpa(details.params.external_pressure)}
-                  unit="MPa"
-                />
-              )}
-              {details.params.other_losses !== undefined && (
-                <Stat
-                  label="Other Losses"
-                  value={details.params.other_losses}
-                  unit="%"
-                />
-              )}
-            </StatGroup>
-          </>
+        {/* Results — narrow on motor_type so each variant renders its own view */}
+        {details && details.results.motor_type === "solid" && (
+          <SolidSimulationView
+            results={details.results}
+            params={details.params}
+          />
         )}
       </div>
     </AppLayout>
