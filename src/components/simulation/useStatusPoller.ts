@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useApiClient, type SimulationStatusRecord } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import {
+  useApiClient,
+  isTerminalSimulationStatus,
+  type SimulationStatusRecord,
+} from "@/lib/api";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -9,10 +13,14 @@ export function useStatusPoller(simId: string) {
   const api = useApiClient();
   const [status, setStatus] = useState<SimulationStatusRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Bumped to force the polling effect to re-run — used by callers after a
+  // mutation (e.g. POST /retry) so the next fetch picks up the new trail
+  // without waiting for the next interval tick.
+  const [activationTick, setActivationTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function poll() {
       try {
@@ -20,11 +28,11 @@ export function useStatusPoller(simId: string) {
         if (cancelled) return;
         setStatus(record);
 
-        // Stop polling when terminal state is reached
-        if (record.status === "done" || record.status === "failed") {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+        const last = record.events[record.events.length - 1];
+        if (last && isTerminalSimulationStatus(last.status)) {
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
           }
         }
       } catch (err: unknown) {
@@ -33,20 +41,18 @@ export function useStatusPoller(simId: string) {
       }
     }
 
-    // Immediate first fetch
     poll();
-
-    // Set up interval
-    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    intervalId = setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      if (intervalId) clearInterval(intervalId);
     };
-  }, [simId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [simId, activationTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { status, error };
+  const revalidate = useCallback(() => {
+    setActivationTick((n) => n + 1);
+  }, []);
+
+  return { status, error, revalidate };
 }

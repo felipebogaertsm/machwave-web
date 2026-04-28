@@ -20,6 +20,7 @@ export function useActiveSimulation() {
         const active =
           sims.find((s) => s.status === "running") ??
           sims.find((s) => s.status === "pending") ??
+          sims.find((s) => s.status === "retried") ??
           null;
         setActiveSim(active);
         setLoading(false);

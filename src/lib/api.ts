@@ -127,17 +127,45 @@ export interface CreateSimulationRequest {
   params?: IBSimParams;
 }
 
+export type SimulationStatus =
+  | "pending"
+  | "running"
+  | "done"
+  | "failed"
+  | "retried";
+
+// `retried` is an active state until the worker picks it up and transitions
+// to `running`; the backend treats it the same as pending/running for
+// blocked-while-active checks.
+const TERMINAL_SIMULATION_STATUSES: ReadonlySet<SimulationStatus> = new Set([
+  "done",
+  "failed",
+]);
+
+export function isTerminalSimulationStatus(status: SimulationStatus): boolean {
+  return TERMINAL_SIMULATION_STATUSES.has(status);
+}
+
+export interface SimulationStatusEvent {
+  status: SimulationStatus;
+  error: string | null;
+  timestamp: string;
+}
+
 export interface SimulationSummary {
   simulation_id: string;
   motor_id: string;
-  status: "pending" | "running" | "done" | "failed";
+  status: SimulationStatus;
   created_at: string;
   updated_at: string;
 }
 
+// `events` is the append-only trail (oldest first); the flat fields below are
+// derived from it and kept for convenience.
 export interface SimulationStatusRecord {
   simulation_id: string;
-  status: "pending" | "running" | "done" | "failed";
+  events: SimulationStatusEvent[];
+  status: SimulationStatus;
   error: string | null;
   created_at: string;
   updated_at: string;
@@ -396,6 +424,13 @@ export class ApiClient {
 
   async deleteSimulation(simId: string): Promise<void> {
     await this.http.delete(`/simulations/${simId}`);
+  }
+
+  async retrySimulation(simId: string): Promise<CreateSimulationResponse> {
+    const { data } = await this.http.post<CreateSimulationResponse>(
+      `/simulations/${simId}/retry`,
+    );
+    return data;
   }
 
   async rerunAllSimulations(): Promise<RerunAllResponse> {

@@ -3,13 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import axios from "axios";
 import {
   useApiClient,
+  isTerminalSimulationStatus,
   type MotorRecord,
   type SimulationCostRecord,
   type SimulationDetails,
+  type SimulationStatus,
 } from "@/lib/api";
 import { useStatusPoller } from "@/components/simulation/useStatusPoller";
+import { useActiveSimulation } from "@/components/simulation/useActiveSimulation";
+import { SimulationTimeline } from "@/components/simulation/SimulationTimeline";
 import { SolidSimulationView } from "@/components/simulation/solid/SolidSimulationView";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -25,11 +30,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AboutCreditsLink } from "@/components/usage/AboutCreditsLink";
-import { Coins, FileJson, Loader2, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Coins,
+  FileJson,
+  History,
+  Loader2,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 
 function statusVariant(
-  status: string,
-): "default" | "secondary" | "success" | "destructive" | "warning" {
+  status: SimulationStatus,
+): "default" | "secondary" | "success" | "destructive" | "warning" | "info" {
   switch (status) {
     case "done":
       return "success";
@@ -37,7 +50,9 @@ function statusVariant(
       return "destructive";
     case "running":
       return "warning";
-    default:
+    case "retried":
+      return "info";
+    case "pending":
       return "secondary";
   }
 }
@@ -55,7 +70,8 @@ function SimulationContent() {
   const router = useRouter();
   const simId = params.id as string;
   const api = useApiClient();
-  const { status, error: pollError } = useStatusPoller(simId);
+  const { status, error: pollError, revalidate } = useStatusPoller(simId);
+  const { activeSim, refresh: refreshActiveSim } = useActiveSimulation();
   const [details, setDetails] = useState<SimulationDetails | null>(null);
   const [motorDetail, setMotorDetail] = useState<MotorRecord | null>(null);
   const [motorDetailError, setMotorDetailError] = useState(false);
@@ -66,12 +82,19 @@ function SimulationContent() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [cost, setCost] = useState<SimulationCostRecord | null>(null);
   const [costOpen, setCostOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const fetchingRef = useRef(false);
   const costFetchedRef = useRef(false);
 
+  const latestStatus: SimulationStatus | undefined = status?.status;
+  const isTerminal =
+    latestStatus != null && isTerminalSimulationStatus(latestStatus);
+
   // Fetch results once simulation is done
   useEffect(() => {
-    if (status?.status === "done" && !details && !fetchingRef.current) {
+    if (latestStatus === "done" && !details && !fetchingRef.current) {
       fetchingRef.current = true;
       api
         .getSimulationResults(simId)
@@ -80,12 +103,12 @@ function SimulationContent() {
           fetchingRef.current = false;
         });
     }
-  }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [latestStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch cost record once the run is complete (or failed — refunds are visible)
   useEffect(() => {
     if (
-      (status?.status === "done" || status?.status === "failed") &&
+      (latestStatus === "done" || latestStatus === "failed") &&
       !cost &&
       !costFetchedRef.current
     ) {
@@ -97,7 +120,7 @@ function SimulationContent() {
           costFetchedRef.current = false;
         });
     }
-  }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [latestStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch motor detail using motor_id from successful results
   useEffect(() => {
@@ -110,7 +133,7 @@ function SimulationContent() {
 
   // Fetch motor detail via listSimulations on failure (no details payload available)
   useEffect(() => {
-    if (status?.status !== "failed" || motorDetail || motorDetailError) return;
+    if (latestStatus !== "failed" || motorDetail || motorDetailError) return;
     api
       .listSimulations()
       .then((sims) => {
@@ -120,7 +143,7 @@ function SimulationContent() {
       })
       .then(setMotorDetail)
       .catch(() => setMotorDetailError(true));
-  }, [status?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [latestStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function writeToClipboard(text: string) {
     try {
@@ -168,6 +191,50 @@ function SimulationContent() {
     } catch {
       setDeleteError("Failed to delete simulation");
       setDeleting(false);
+    }
+  }
+
+  async function handleRetry() {
+    if (!status || retrying) return;
+    setRetryError(null);
+    setRetrying(true);
+
+    try {
+      // POST first so the server commits the `retried` event before we
+      // re-poll. Doing it the other way around (optimistic-then-POST) racy
+      // — a poll could fire between the optimistic update and the server
+      // commit and clobber local state with the still-`done` trail.
+      await api.retrySimulation(simId);
+
+      // Drop cached results/cost so the new run's data is fetched fresh
+      // once it lands.
+      setDetails(null);
+      setCost(null);
+      fetchingRef.current = false;
+      costFetchedRef.current = false;
+
+      // Pull the new state immediately (the trail now ends with `retried`).
+      revalidate();
+      refreshActiveSim();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const code = err.response?.status;
+        if (code === 402) {
+          setRetryError("Not enough credits to retry this simulation.");
+        } else if (code === 409) {
+          setRetryError(
+            "Another simulation is currently active. Wait for it to finish.",
+          );
+        } else if (code === 404) {
+          setRetryError("This simulation no longer exists.");
+        } else {
+          setRetryError("Failed to retry simulation.");
+        }
+      } else {
+        setRetryError("Failed to retry simulation.");
+      }
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -233,6 +300,40 @@ function SimulationContent() {
             <Button
               variant="outline"
               size="icon"
+              title="Status timeline"
+              aria-label="Open status timeline"
+              onClick={() => setTimelineOpen(true)}
+              disabled={!status || status.events.length === 0}
+            >
+              <History className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              title={
+                isTerminal
+                  ? activeSim && activeSim.simulation_id !== simId
+                    ? "Another simulation is currently active"
+                    : "Retry this simulation"
+                  : "Retry available once the run completes"
+              }
+              aria-label="Retry simulation"
+              onClick={handleRetry}
+              disabled={
+                !isTerminal ||
+                retrying ||
+                (activeSim != null && activeSim.simulation_id !== simId)
+              }
+            >
+              {retrying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
               title="Export simulation as JSON"
               aria-label="Export simulation as JSON"
               onClick={handleExportJson}
@@ -273,61 +374,68 @@ function SimulationContent() {
         {pollError && (
           <p className="text-sm text-destructive">Polling error: {pollError}</p>
         )}
+        {retryError && (
+          <p className="text-sm text-destructive">{retryError}</p>
+        )}
         {deleteError && (
           <p className="text-sm text-destructive">{deleteError}</p>
         )}
 
-        {/* Running indicator */}
-        {(status?.status === "pending" || status?.status === "running") && (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-muted-foreground">
-                Simulation is {status.status}… results will appear
-                automatically.
-              </p>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Error */}
-        {status?.status === "failed" && (
-          <Card className="border-destructive">
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <CardTitle className="text-destructive">
-                Simulation Failed
-              </CardTitle>
-              <div className="flex shrink-0 gap-2">
-                {motorDetailError && (
-                  <p className="self-center text-xs text-muted-foreground">
-                    Could not load motor data
-                  </p>
+        {/* Inline timeline. Anytime the run isn't `done`, the page has no
+            results to show, so we let the trail fill the space. The Timeline
+            modal still works for `done` runs (and for a focused view here). */}
+        {status &&
+          status.events.length > 0 &&
+          latestStatus !== "done" && (
+            <Card
+              className={
+                latestStatus === "failed" ? "border-destructive" : undefined
+              }
+            >
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <CardTitle
+                  className={cn(
+                    "text-base flex items-center gap-2",
+                    latestStatus === "failed" && "text-destructive",
+                  )}
+                >
+                  <History className="h-4 w-4" />
+                  {latestStatus === "failed"
+                    ? "Simulation Failed"
+                    : "Status timeline"}
+                </CardTitle>
+                {latestStatus === "failed" && (
+                  <div className="flex shrink-0 gap-2">
+                    {motorDetailError && (
+                      <p className="self-center text-xs text-muted-foreground">
+                        Could not load motor data
+                      </p>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!motorDetail}
+                      onClick={handleCopyPayload}
+                    >
+                      {payloadCopied ? "Copied!" : "Copy Motor Payload"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!motorDetail}
+                      onClick={handleCopyErrorReport}
+                    >
+                      {reportCopied ? "Copied!" : "Copy Error Report"}
+                    </Button>
+                  </div>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!motorDetail}
-                  onClick={handleCopyPayload}
-                >
-                  {payloadCopied ? "Copied!" : "Copy Motor Payload"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!motorDetail}
-                  onClick={handleCopyErrorReport}
-                >
-                  {reportCopied ? "Copied!" : "Copy Error Report"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
-                {status.error ?? "Unknown error"}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
+              </CardHeader>
+              <CardContent>
+                <SimulationTimeline events={status.events} />
+              </CardContent>
+            </Card>
+          )}
 
         {/* Brief gap between status flipping to "done" and the results
             payload arriving — show a spinner so the page isn't blank. */}
@@ -347,6 +455,27 @@ function SimulationContent() {
             params={details.params}
           />
         )}
+
+        <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Status timeline
+              </DialogTitle>
+              <DialogDescription>
+                Append-only event trail for this simulation.
+              </DialogDescription>
+            </DialogHeader>
+            {status && status.events.length > 0 ? (
+              <div className="-mx-1 mt-3 max-h-[70vh] overflow-y-auto px-1 pt-2">
+                <SimulationTimeline events={status.events} />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No events yet.</p>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <CriticalConfirmDialog
           open={deleteOpen}

@@ -21,7 +21,7 @@ type SortDir = "asc" | "desc";
 
 function statusVariant(
   status: SimulationSummary["status"],
-): "default" | "secondary" | "success" | "destructive" | "warning" {
+): "default" | "secondary" | "success" | "destructive" | "warning" | "info" {
   switch (status) {
     case "done":
       return "success";
@@ -29,7 +29,9 @@ function statusVariant(
       return "destructive";
     case "running":
       return "warning";
-    default:
+    case "retried":
+      return "info";
+    case "pending":
       return "secondary";
   }
 }
