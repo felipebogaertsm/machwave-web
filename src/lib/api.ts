@@ -288,6 +288,9 @@ export interface CreateSimulationResponse {
   estimated_tokens: number;
 }
 
+// `charged_to` indicates which pool the run was billed against. Older
+// records (created before team support landed) default to "user", so callers
+// can treat it as always populated.
 export interface SimulationCostRecord {
   simulation_id: string;
   estimated_tokens: number;
@@ -295,6 +298,7 @@ export interface SimulationCostRecord {
   iterations: number | null;
   tokens_charged: number;
   period: string;
+  charged_to: "user" | "team";
   created_at: string;
   completed_at: string | null;
   refunded: boolean;
@@ -304,6 +308,85 @@ export interface UpdateLimitsRequest {
   motor_limit?: number | null;
   simulation_limit?: number | null;
   monthly_token_limit?: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Teams
+// ---------------------------------------------------------------------------
+
+export type TeamRole = "owner" | "editor" | "viewer";
+
+export interface TeamSummary {
+  team_id: string;
+  name: string;
+  description: string | null;
+  role: TeamRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTeamRequest {
+  name: string;
+  description?: string | null;
+}
+
+export interface UpdateTeamRequest {
+  name?: string | null;
+  description?: string | null;
+}
+
+export interface TeamMemberSummary {
+  user_id: string;
+  email: string | null;
+  role: TeamRole;
+  joined_at: string;
+}
+
+export interface CreateInviteRequest {
+  // Backend rejects "owner" with 422 — owners are minted by the API only.
+  role: "editor" | "viewer";
+  invitee_email?: string | null;
+}
+
+export interface TeamInvite {
+  token: string;
+  team_id: string;
+  role: TeamRole;
+  invitee_email: string | null;
+  created_at: string;
+  expires_at: string;
+  accepted_by: string | null;
+  accepted_at: string | null;
+  revoked: boolean;
+}
+
+export interface InviteInspectResponse {
+  team_id: string;
+  team_name: string;
+  role: TeamRole;
+  invitee_email: string | null;
+  expires_at: string;
+  is_usable: boolean;
+}
+
+export interface TeamAccountSnapshot {
+  team_id: string;
+  motor_limit: number | null;
+  simulation_limit: number | null;
+  credits: CreditAccount;
+  motor_count: number | null;
+  simulation_count: number | null;
+}
+
+export interface TeamUsageSnapshot {
+  team_id: string;
+  motor_count: number;
+  motor_limit: number | null;
+  motors_remaining: number | null;
+  simulation_count: number;
+  simulation_limit: number | null;
+  simulations_remaining: number | null;
+  credits: CreditAccount;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,103 +416,143 @@ export class ApiClient {
   }
 
   // ── Motors ─────────────────────────────────────────────────────────────────
+  //
+  // Each method takes an optional `teamId` — when present it routes to the
+  // team-scoped equivalent (`/teams/{tid}/motors/...`). The personal flows
+  // pass nothing and stay on the original `/motors/...` paths.
 
-  async createMotor(body: CreateMotorRequest): Promise<{ motor_id: string }> {
-    const { data } = await this.http.post<{ motor_id: string }>(
-      "/motors",
-      body,
-    );
+  async createMotor(
+    body: CreateMotorRequest,
+    teamId?: string,
+  ): Promise<{ motor_id: string }> {
+    const path = teamId ? `/teams/${teamId}/motors` : "/motors";
+    const { data } = await this.http.post<{ motor_id: string }>(path, body);
     return data;
   }
 
-  async listMotors(): Promise<MotorSummary[]> {
-    const { data } = await this.http.get<MotorSummary[]>("/motors");
+  async listMotors(teamId?: string): Promise<MotorSummary[]> {
+    const path = teamId ? `/teams/${teamId}/motors` : "/motors";
+    const { data } = await this.http.get<MotorSummary[]>(path);
     return data;
   }
 
-  async getMotor(motorId: string): Promise<MotorRecord> {
-    const { data } = await this.http.get<MotorRecord>(`/motors/${motorId}`);
+  async getMotor(motorId: string, teamId?: string): Promise<MotorRecord> {
+    const path = teamId
+      ? `/teams/${teamId}/motors/${motorId}`
+      : `/motors/${motorId}`;
+    const { data } = await this.http.get<MotorRecord>(path);
     return data;
   }
 
   async updateMotor(
     motorId: string,
     body: Partial<CreateMotorRequest>,
+    teamId?: string,
   ): Promise<MotorRecord> {
-    const { data } = await this.http.put<MotorRecord>(
-      `/motors/${motorId}`,
-      body,
-    );
+    const path = teamId
+      ? `/teams/${teamId}/motors/${motorId}`
+      : `/motors/${motorId}`;
+    const { data } = await this.http.put<MotorRecord>(path, body);
     return data;
   }
 
-  async deleteMotor(motorId: string): Promise<void> {
-    await this.http.delete(`/motors/${motorId}`);
+  async deleteMotor(motorId: string, teamId?: string): Promise<void> {
+    const path = teamId
+      ? `/teams/${teamId}/motors/${motorId}`
+      : `/motors/${motorId}`;
+    await this.http.delete(path);
   }
 
   // ── Simulations ────────────────────────────────────────────────────────────
 
   async createSimulation(
     body: CreateSimulationRequest,
+    teamId?: string,
   ): Promise<CreateSimulationResponse> {
-    const { data } = await this.http.post<CreateSimulationResponse>(
-      "/simulations",
-      body,
-    );
+    const path = teamId ? `/teams/${teamId}/simulations` : "/simulations";
+    const { data } = await this.http.post<CreateSimulationResponse>(path, body);
     return data;
   }
 
   async estimateSimulation(
     body: CreateSimulationRequest,
+    teamId?: string,
   ): Promise<EstimateSimulationResponse> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/estimate`
+      : "/simulations/estimate";
     const { data } = await this.http.post<EstimateSimulationResponse>(
-      "/simulations/estimate",
+      path,
       body,
     );
     return data;
   }
 
-  async getSimulationCost(simId: string): Promise<SimulationCostRecord> {
-    const { data } = await this.http.get<SimulationCostRecord>(
-      `/simulations/${simId}/cost`,
-    );
+  async getSimulationCost(
+    simId: string,
+    teamId?: string,
+  ): Promise<SimulationCostRecord> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/${simId}/cost`
+      : `/simulations/${simId}/cost`;
+    const { data } = await this.http.get<SimulationCostRecord>(path);
     return data;
   }
 
-  async listSimulations(): Promise<SimulationSummary[]> {
-    const { data } = await this.http.get<SimulationSummary[]>("/simulations");
+  async listSimulations(teamId?: string): Promise<SimulationSummary[]> {
+    const path = teamId ? `/teams/${teamId}/simulations` : "/simulations";
+    const { data } = await this.http.get<SimulationSummary[]>(path);
     return data;
   }
 
-  async getSimulation(simId: string): Promise<SimulationSummary> {
-    const { data } = await this.http.get<SimulationSummary>(
-      `/simulations/${simId}`,
-    );
+  async getSimulation(
+    simId: string,
+    teamId?: string,
+  ): Promise<SimulationSummary> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/${simId}`
+      : `/simulations/${simId}`;
+    const { data } = await this.http.get<SimulationSummary>(path);
     return data;
   }
 
-  async getSimulationStatus(simId: string): Promise<SimulationStatusRecord> {
-    const { data } = await this.http.get<SimulationStatusRecord>(
-      `/simulations/${simId}/status`,
-    );
+  async getSimulationStatus(
+    simId: string,
+    teamId?: string,
+  ): Promise<SimulationStatusRecord> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/${simId}/status`
+      : `/simulations/${simId}/status`;
+    const { data } = await this.http.get<SimulationStatusRecord>(path);
     return data;
   }
 
-  async getSimulationResults(simId: string): Promise<SimulationDetails> {
-    const { data } = await this.http.get<SimulationDetails>(
-      `/simulations/${simId}/results`,
-    );
+  async getSimulationResults(
+    simId: string,
+    teamId?: string,
+  ): Promise<SimulationDetails> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/${simId}/results`
+      : `/simulations/${simId}/results`;
+    const { data } = await this.http.get<SimulationDetails>(path);
     return data;
   }
 
-  async deleteSimulation(simId: string): Promise<void> {
-    await this.http.delete(`/simulations/${simId}`);
+  async deleteSimulation(simId: string, teamId?: string): Promise<void> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/${simId}`
+      : `/simulations/${simId}`;
+    await this.http.delete(path);
   }
 
-  async retrySimulation(simId: string): Promise<CreateSimulationResponse> {
-    const { data } = await this.http.post<CreateSimulationResponse>(
-      `/simulations/${simId}/retry`,
-    );
+  async retrySimulation(
+    simId: string,
+    teamId?: string,
+  ): Promise<CreateSimulationResponse> {
+    const path = teamId
+      ? `/teams/${teamId}/simulations/${simId}/retry`
+      : `/simulations/${simId}/retry`;
+    const { data } = await this.http.post<CreateSimulationResponse>(path);
     return data;
   }
 
@@ -467,6 +590,139 @@ export class ApiClient {
 
   async getMyUsage(): Promise<UsageSnapshot> {
     const { data } = await this.http.get<UsageSnapshot>("/me/usage");
+    return data;
+  }
+
+  // ── Teams ──────────────────────────────────────────────────────────────────
+
+  async listTeams(): Promise<TeamSummary[]> {
+    const { data } = await this.http.get<TeamSummary[]>("/teams");
+    return data;
+  }
+
+  async createTeam(body: CreateTeamRequest): Promise<{ team_id: string }> {
+    const { data } = await this.http.post<{ team_id: string }>("/teams", body);
+    return data;
+  }
+
+  async getTeam(teamId: string): Promise<TeamSummary> {
+    const { data } = await this.http.get<TeamSummary>(`/teams/${teamId}`);
+    return data;
+  }
+
+  async updateTeam(
+    teamId: string,
+    body: UpdateTeamRequest,
+  ): Promise<TeamSummary> {
+    const { data } = await this.http.patch<TeamSummary>(
+      `/teams/${teamId}`,
+      body,
+    );
+    return data;
+  }
+
+  async deleteTeam(teamId: string): Promise<void> {
+    await this.http.delete(`/teams/${teamId}`);
+  }
+
+  async getTeamAccount(teamId: string): Promise<TeamAccountSnapshot> {
+    const { data } = await this.http.get<TeamAccountSnapshot>(
+      `/teams/${teamId}/account`,
+    );
+    return data;
+  }
+
+  async getTeamUsage(teamId: string): Promise<TeamUsageSnapshot> {
+    const { data } = await this.http.get<TeamUsageSnapshot>(
+      `/teams/${teamId}/usage`,
+    );
+    return data;
+  }
+
+  // ── Team members ───────────────────────────────────────────────────────────
+
+  async listTeamMembers(teamId: string): Promise<TeamMemberSummary[]> {
+    const { data } = await this.http.get<TeamMemberSummary[]>(
+      `/teams/${teamId}/members`,
+    );
+    return data;
+  }
+
+  async changeTeamMemberRole(
+    teamId: string,
+    userId: string,
+    role: TeamRole,
+  ): Promise<TeamMemberSummary> {
+    const { data } = await this.http.patch<TeamMemberSummary>(
+      `/teams/${teamId}/members/${userId}`,
+      { role },
+    );
+    return data;
+  }
+
+  async removeTeamMember(teamId: string, userId: string): Promise<void> {
+    await this.http.delete(`/teams/${teamId}/members/${userId}`);
+  }
+
+  // ── Team invites ───────────────────────────────────────────────────────────
+
+  async listTeamInvites(teamId: string): Promise<TeamInvite[]> {
+    const { data } = await this.http.get<TeamInvite[]>(
+      `/teams/${teamId}/invites`,
+    );
+    return data;
+  }
+
+  async createTeamInvite(
+    teamId: string,
+    body: CreateInviteRequest,
+  ): Promise<TeamInvite> {
+    const { data } = await this.http.post<TeamInvite>(
+      `/teams/${teamId}/invites`,
+      body,
+    );
+    return data;
+  }
+
+  async revokeTeamInvite(teamId: string, token: string): Promise<void> {
+    await this.http.delete(`/teams/${teamId}/invites/${token}`);
+  }
+
+  // Anyone signed in can inspect or accept by token. The 404 on missing
+  // membership is intentional — don't leak team existence to non-invitees.
+  async inspectInvite(token: string): Promise<InviteInspectResponse> {
+    const { data } = await this.http.get<InviteInspectResponse>(
+      `/invites/${token}`,
+    );
+    return data;
+  }
+
+  async acceptInvite(token: string): Promise<TeamMemberSummary> {
+    const { data } = await this.http.post<TeamMemberSummary>(
+      `/invites/${token}/accept`,
+    );
+    return data;
+  }
+
+  // ── Admin: Teams ───────────────────────────────────────────────────────────
+
+  async adminListTeams(): Promise<TeamSummary[]> {
+    const { data } = await this.http.get<TeamSummary[]>("/admin/teams");
+    return data;
+  }
+
+  async adminDeleteTeam(teamId: string): Promise<void> {
+    await this.http.delete(`/admin/teams/${teamId}`);
+  }
+
+  async adminUpdateTeamLimits(
+    teamId: string,
+    body: UpdateLimitsRequest,
+  ): Promise<TeamAccountSnapshot> {
+    const { data } = await this.http.patch<TeamAccountSnapshot>(
+      `/admin/teams/${teamId}/account/limits`,
+      body,
+    );
     return data;
   }
 

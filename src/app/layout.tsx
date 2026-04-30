@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { TeamScopeProvider } from "@/lib/team-scope";
 import { Toaster } from "@/components/ui/toaster";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,9 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <TeamScopeProvider>{children}</TeamScopeProvider>
+          </AuthProvider>
           <Toaster />
         </ThemeProvider>
       </body>

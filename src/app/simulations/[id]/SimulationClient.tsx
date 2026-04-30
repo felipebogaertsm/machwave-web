@@ -12,6 +12,7 @@ import {
   type SimulationDetails,
   type SimulationStatus,
 } from "@/lib/api";
+import { canEdit, useTeamScope } from "@/lib/team-scope";
 import { useStatusPoller } from "@/components/simulation/useStatusPoller";
 import { useActiveSimulation } from "@/components/simulation/useActiveSimulation";
 import { SimulationTimeline } from "@/components/simulation/SimulationTimeline";
@@ -72,7 +73,9 @@ function SimulationContent() {
   const router = useRouter();
   const simId = params.id as string;
   const api = useApiClient();
-  const { status, error: pollError, revalidate } = useStatusPoller(simId);
+  const { role, teamId } = useTeamScope();
+  const writable = canEdit(role);
+  const { status, error: pollError, revalidate } = useStatusPoller(simId, teamId);
   const { activeSim, refresh: refreshActiveSim } = useActiveSimulation();
   const [details, setDetails] = useState<SimulationDetails | null>(null);
   const [motorDetail, setMotorDetail] = useState<MotorRecord | null>(null);
@@ -100,7 +103,7 @@ function SimulationContent() {
     if (latestStatus === "done" && !details && !fetchingRef.current) {
       fetchingRef.current = true;
       api
-        .getSimulationResults(simId)
+        .getSimulationResults(simId, teamId)
         .then(setDetails)
         .catch(() => {
           fetchingRef.current = false;
@@ -117,7 +120,7 @@ function SimulationContent() {
     ) {
       costFetchedRef.current = true;
       api
-        .getSimulationCost(simId)
+        .getSimulationCost(simId, teamId)
         .then(setCost)
         .catch(() => {
           costFetchedRef.current = false;
@@ -129,7 +132,7 @@ function SimulationContent() {
   useEffect(() => {
     if (!details?.motor_id || motorDetail || motorDetailError) return;
     api
-      .getMotor(details.motor_id)
+      .getMotor(details.motor_id, teamId)
       .then(setMotorDetail)
       .catch(() => setMotorDetailError(true));
   }, [details?.motor_id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -138,11 +141,11 @@ function SimulationContent() {
   useEffect(() => {
     if (latestStatus !== "failed" || motorDetail || motorDetailError) return;
     api
-      .listSimulations()
+      .listSimulations(teamId)
       .then((sims) => {
         const sim = sims.find((s) => s.simulation_id === simId);
         if (!sim) throw new Error("Simulation not found");
-        return api.getMotor(sim.motor_id);
+        return api.getMotor(sim.motor_id, teamId);
       })
       .then(setMotorDetail)
       .catch(() => setMotorDetailError(true));
@@ -189,7 +192,7 @@ function SimulationContent() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await api.deleteSimulation(simId);
+      await api.deleteSimulation(simId, teamId);
       router.replace("/dashboard");
     } catch {
       setDeleteError("Failed to delete simulation");
@@ -207,7 +210,7 @@ function SimulationContent() {
       // re-poll. Doing it the other way around (optimistic-then-POST) racy
       // — a poll could fire between the optimistic update and the server
       // commit and clobber local state with the still-`done` trail.
-      await api.retrySimulation(simId);
+      await api.retrySimulation(simId, teamId);
 
       // Drop cached results/cost so the new run's data is fetched fresh
       // once it lands.
@@ -311,33 +314,35 @@ function SimulationContent() {
             >
               <History className="h-4 w-4" />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              title={
-                isTerminal
-                  ? activeSim && activeSim.simulation_id !== simId
-                    ? "Another simulation is currently active"
-                    : "Retry this simulation"
-                  : "Retry available once the run completes"
-              }
-              aria-label="Retry simulation"
-              onClick={() => {
-                setRetryError(null);
-                setRetryConfirmOpen(true);
-              }}
-              disabled={
-                !isTerminal ||
-                retrying ||
-                (activeSim != null && activeSim.simulation_id !== simId)
-              }
-            >
-              {retrying ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
+            {writable && (
+              <Button
+                variant="outline"
+                size="icon"
+                title={
+                  isTerminal
+                    ? activeSim && activeSim.simulation_id !== simId
+                      ? "Another simulation is currently active"
+                      : "Retry this simulation"
+                    : "Retry available once the run completes"
+                }
+                aria-label="Retry simulation"
+                onClick={() => {
+                  setRetryError(null);
+                  setRetryConfirmOpen(true);
+                }}
+                disabled={
+                  !isTerminal ||
+                  retrying ||
+                  (activeSim != null && activeSim.simulation_id !== simId)
+                }
+              >
+                {retrying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="icon"
@@ -358,23 +363,25 @@ function SimulationContent() {
             >
               <Coins className="h-4 w-4" />
             </Button>
-            <Button
-              variant="destructive"
-              size="icon"
-              title="Delete simulation"
-              aria-label="Delete simulation"
-              onClick={() => {
-                setDeleteError(null);
-                setDeleteOpen(true);
-              }}
-              disabled={deleting}
-            >
-              {deleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </Button>
+            {writable && (
+              <Button
+                variant="destructive"
+                size="icon"
+                title="Delete simulation"
+                aria-label="Delete simulation"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteOpen(true);
+                }}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -621,11 +628,16 @@ function CostBody({
       : null;
   return (
     <div className="space-y-3 text-sm">
-      {cost.refunded && (
-        <span className="inline-block rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-400">
-          Refunded
-        </span>
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={cost.charged_to === "team" ? "info" : "secondary"}>
+          Charged to: {cost.charged_to === "team" ? "Team" : "Personal"}
+        </Badge>
+        {cost.refunded && (
+          <span className="inline-block rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+            Refunded
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric
           label="Estimated"

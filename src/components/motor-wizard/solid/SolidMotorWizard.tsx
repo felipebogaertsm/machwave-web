@@ -16,6 +16,7 @@ import {
 } from "@/lib/validations";
 import { Loader2 } from "lucide-react";
 import { useApiClient } from "@/lib/api";
+import { useTeamScope } from "@/lib/team-scope";
 import { toMotorApiConfig } from "@/lib/units";
 import { Button } from "@/components/ui/button";
 import { GrainStep } from "./steps/GrainStep";
@@ -91,6 +92,7 @@ export function SolidMotorWizard(props: Props = {}) {
 
   const router = useRouter();
   const api = useApiClient();
+  const { teamId } = useTeamScope();
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -141,16 +143,23 @@ export function SolidMotorWizard(props: Props = {}) {
     setServerError(null);
     try {
       if (isEdit && motorId) {
-        await api.updateMotor(motorId, {
-          name: data.name,
-          config: toMotorApiConfig(data.config),
-        });
+        await api.updateMotor(
+          motorId,
+          {
+            name: data.name,
+            config: toMotorApiConfig(data.config),
+          },
+          teamId,
+        );
         router.push(`/motors/${motorId}`);
       } else {
-        const { motor_id } = await api.createMotor({
-          name: data.name,
-          config: toMotorApiConfig(data.config),
-        });
+        const { motor_id } = await api.createMotor(
+          {
+            name: data.name,
+            config: toMotorApiConfig(data.config),
+          },
+          teamId,
+        );
         router.push(`/motors/${motor_id}`);
       }
     } catch (err: unknown) {

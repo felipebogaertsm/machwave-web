@@ -8,6 +8,7 @@ import {
   type MotorSummary,
   type SimulationSummary,
 } from "@/lib/api";
+import { canEdit, useTeamScope } from "@/lib/team-scope";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,8 @@ export default function SimulationsPage() {
 function SimulationsContent() {
   const api = useApiClient();
   const router = useRouter();
+  const { scope, role, teamId } = useTeamScope();
+  const writable = canEdit(role);
   const [sims, setSims] = useState<SimulationSummary[]>([]);
   const [motorIndex, setMotorIndex] = useState<Record<string, MotorSummary>>(
     {},
@@ -71,7 +74,7 @@ function SimulationsContent() {
     setDeleteError(null);
     setError(null);
     try {
-      await api.deleteSimulation(simId);
+      await api.deleteSimulation(simId, teamId);
       setSims((prev) => prev.filter((s) => s.simulation_id !== simId));
       setPendingDeleteId(null);
     } catch {
@@ -82,15 +85,22 @@ function SimulationsContent() {
   }
 
   useEffect(() => {
-    Promise.all([api.listSimulations(), api.listMotors()])
+    let cancelled = false;
+    Promise.all([api.listSimulations(teamId), api.listMotors(teamId)])
       .then(([s, m]) => {
+        if (cancelled) return;
         setSims(s);
         const idx: Record<string, MotorSummary> = {};
         for (const motor of m) idx[motor.motor_id] = motor;
         setMotorIndex(idx);
       })
-      .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, teamId]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -127,6 +137,11 @@ function SimulationsContent() {
               <span className="text-sm text-muted-foreground">
                 ({sims.length})
               </span>
+            )}
+            {scope.kind === "team" && (
+              <Badge variant="secondary" className="ml-2">
+                {scope.team.name}
+              </Badge>
             )}
           </div>
         </div>
@@ -260,21 +275,27 @@ function SimulationsContent() {
                             className="px-3 py-2 text-right"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              aria-label="Delete simulation"
-                              title="Delete"
-                              disabled={deletingId === sim.simulation_id}
-                              onClick={() => requestDelete(sim.simulation_id)}
-                            >
-                              {deletingId === sim.simulation_id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
+                            {writable ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                aria-label="Delete simulation"
+                                title="Delete"
+                                disabled={deletingId === sim.simulation_id}
+                                onClick={() => requestDelete(sim.simulation_id)}
+                              >
+                                {deletingId === sim.simulation_id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                view only
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );

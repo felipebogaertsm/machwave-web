@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Building2,
   CheckCircle2,
   Loader2,
   RefreshCw,
@@ -239,6 +240,33 @@ function AdminPage() {
               <Button asChild variant="outline" size="sm">
                 <Link href="/admin/users">
                   Manage users
+                  <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Teams
+            </CardTitle>
+            <CardDescription>
+              Override team caps and balances, or force-delete a team.
+              Administrators are not team members — these endpoints are gated
+              on the admin role, not on team ownership.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Open the detailed teams table.
+              </p>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/admin/teams">
+                  Manage teams
                   <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>
               </Button>

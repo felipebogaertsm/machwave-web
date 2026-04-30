@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useApiClient, type MotorRecord } from "@/lib/api";
+import { useTeamScope } from "@/lib/team-scope";
 import { fromMotorApiConfig } from "@/lib/units";
 import type { SolidMotorForm } from "@/lib/validations";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -22,15 +23,16 @@ function EditMotorContent() {
   const params = useParams();
   const motorId = params.id as string;
   const api = useApiClient();
+  const { teamId } = useTeamScope();
   const [motor, setMotor] = useState<MotorRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api
-      .getMotor(motorId)
+      .getMotor(motorId, teamId)
       .then(setMotor)
       .catch(() => setError("Motor not found"));
-  }, [motorId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, motorId, teamId]);
 
   return (
     <AppLayout>

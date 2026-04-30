@@ -7,6 +7,7 @@ import {
   type MotorSummary,
   type SimulationSummary,
 } from "@/lib/api";
+import { canEdit, useTeamScope } from "@/lib/team-scope";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NewMotorButton } from "@/components/motor/NewMotorButton";
@@ -41,25 +42,39 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const api = useApiClient();
+  const { scope, role, teamId } = useTeamScope();
+  const writable = canEdit(role);
   const [motors, setMotors] = useState<MotorSummary[]>([]);
   const [sims, setSims] = useState<SimulationSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.listMotors(), api.listSimulations()])
+    let cancelled = false;
+    Promise.all([api.listMotors(teamId), api.listSimulations(teamId)])
       .then(([m, s]) => {
+        if (cancelled) return;
         setMotors(m);
         setSims(s);
       })
-      .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, teamId]);
 
   return (
     <AppLayout>
       <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">dashboard</h1>
-          <NewMotorButton />
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">dashboard</h1>
+            {scope.kind === "team" && (
+              <Badge variant="secondary">{scope.team.name}</Badge>
+            )}
+          </div>
+          {writable && <NewMotorButton />}
         </div>
 
         {!loading && motors.length === 0 && sims.length === 0 && (

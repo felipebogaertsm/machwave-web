@@ -138,6 +138,9 @@ export type RunSimulationDialogProps = {
   onOpenChange: (open: boolean) => void;
   request: CreateSimulationRequest | null;
   motorName?: string;
+  // When set, routes estimate + create through /teams/{teamId}/simulations
+  // so the team's pool is debited instead of the caller's personal credits.
+  teamId?: string;
   onCreated: (response: CreateSimulationResponse) => void;
 };
 
@@ -146,6 +149,7 @@ export function RunSimulationDialog({
   onOpenChange,
   request,
   motorName,
+  teamId,
   onCreated,
 }: RunSimulationDialogProps) {
   const [submitting, setSubmitting] = useState(false);
@@ -163,6 +167,7 @@ export function RunSimulationDialog({
           <RunSimulationDialogBody
             request={request}
             motorName={motorName}
+            teamId={teamId}
             submitting={submitting}
             setSubmitting={setSubmitting}
             onCreated={(res) => {
@@ -179,12 +184,14 @@ export function RunSimulationDialog({
 function RunSimulationDialogBody({
   request,
   motorName,
+  teamId,
   submitting,
   setSubmitting,
   onCreated,
 }: {
   request: CreateSimulationRequest;
   motorName?: string;
+  teamId?: string;
   submitting: boolean;
   setSubmitting: (v: boolean) => void;
   onCreated: (res: CreateSimulationResponse) => void;
@@ -219,10 +226,13 @@ function RunSimulationDialogBody({
     const timer = setTimeout(() => {
       if (cancelled) return;
       api
-        .estimateSimulation({
-          motor_id: request.motor_id,
-          params: toSimParamsApiPayload(values),
-        })
+        .estimateSimulation(
+          {
+            motor_id: request.motor_id,
+            params: toSimParamsApiPayload(values),
+          },
+          teamId,
+        )
         .then((e) => {
           if (cancelled) return;
           setEstimate(e);
@@ -239,20 +249,23 @@ function RunSimulationDialogBody({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [api, request.motor_id, values, isValid]);
+  }, [api, request.motor_id, teamId, values, isValid]);
 
   async function handleSubmit() {
     if (!values) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await api.createSimulation({
-        motor_id: request.motor_id,
-        params: toSimParamsApiPayload(values),
-      });
+      const res = await api.createSimulation(
+        {
+          motor_id: request.motor_id,
+          params: toSimParamsApiPayload(values),
+        },
+        teamId,
+      );
       onCreated(res);
     } catch (e) {
-      setSubmitError(submitErrorMessage(e as ApiError, estimate));
+      setSubmitError(submitErrorMessage(e as ApiError, estimate, !!teamId));
       setSubmitting(false);
     }
   }
@@ -267,12 +280,12 @@ function RunSimulationDialogBody({
           {motorName ? (
             <>
               Submit a simulation for{" "}
-              <span className="font-medium text-foreground">{motorName}</span>.
-              Tokens are charged up front and reconciled when the run completes.
+              <span className="font-medium text-foreground">{motorName}</span>.{" "}
             </>
-          ) : (
-            "Tokens are charged up front and reconciled when the run completes."
-          )}
+          ) : null}
+          {teamId
+            ? "Tokens are charged to the team's pool — your personal credits are unaffected."
+            : "Tokens are charged up front and reconciled when the run completes."}
         </DialogDescription>
       </DialogHeader>
 
@@ -467,10 +480,16 @@ function detailMessage(e: ApiError): string | null {
 function submitErrorMessage(
   e: ApiError,
   estimate: EstimateSimulationResponse | null,
+  teamScope: boolean,
 ): string {
   const status = e.response?.status;
   const detail = detailMessage(e);
   if (status === 402) {
+    if (teamScope) {
+      // Team scope: don't suggest topping up personal credits — the team
+      // pool is what got refused.
+      return detail ?? "Team is out of tokens this period.";
+    }
     if (estimate && estimate.credits.tokens_remaining != null) {
       return `Not enough tokens. ${estimate.credits.tokens_remaining.toLocaleString()} remaining this period; this run needs ${estimate.estimated_tokens.toLocaleString()}.`;
     }

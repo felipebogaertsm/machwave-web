@@ -14,10 +14,13 @@ import {
   Rocket,
   Settings,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useTeamScope } from "@/lib/team-scope";
 import { NewMotorAccordion } from "@/components/motor/NewMotorAccordion";
+import { TeamSwitcher } from "@/components/layout/TeamSwitcher";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -48,6 +51,10 @@ const navItems: NavItem[] = [
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname();
   const { user, logout, isAdmin } = useAuth();
+  const { scope, role } = useTeamScope();
+  // Viewers can't create motors; hide the entry-point so the wizard isn't
+  // reachable from the sidebar (the API would 403 anyway).
+  const canCreateMotor = scope.kind === "personal" || role !== "viewer";
 
   return (
     <>
@@ -58,11 +65,16 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         </span>
       </div>
       <Separator />
+      <div className="px-3 pt-3">
+        <TeamSwitcher onNavigate={onNavClick} />
+      </div>
       <nav className="flex-1 space-y-1 p-3">
-        <NewMotorAccordion
-          itemClassName={navItemClass}
-          onNavigate={onNavClick}
-        />
+        {canCreateMotor && (
+          <NewMotorAccordion
+            itemClassName={navItemClass}
+            onNavigate={onNavClick}
+          />
+        )}
         {navItems.map(({ href, label, icon: Icon, external }) => {
           const className = cn(
             navItemClass,
@@ -103,6 +115,21 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         <p className="truncate px-3 py-1 text-xs text-muted-foreground">
           {user?.email}
         </p>
+        {scope.kind === "team" && (
+          <Link
+            href={`/teams/${scope.team.team_id}`}
+            onClick={onNavClick}
+            className={cn(
+              navItemClass,
+              pathname.startsWith(`/teams/${scope.team.team_id}`)
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Team
+          </Link>
+        )}
         {isAdmin && (
           <Link
             href="/admin"

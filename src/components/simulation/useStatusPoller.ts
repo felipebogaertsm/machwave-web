@@ -9,7 +9,7 @@ import {
 
 const POLL_INTERVAL_MS = 2000;
 
-export function useStatusPoller(simId: string) {
+export function useStatusPoller(simId: string, teamId?: string) {
   const api = useApiClient();
   const [status, setStatus] = useState<SimulationStatusRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function useStatusPoller(simId: string) {
 
     async function poll() {
       try {
-        const record = await api.getSimulationStatus(simId);
+        const record = await api.getSimulationStatus(simId, teamId);
         if (cancelled) return;
         setStatus(record);
 
@@ -48,7 +48,7 @@ export function useStatusPoller(simId: string) {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [simId, activationTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [simId, teamId, activationTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const revalidate = useCallback(() => {
     setActivationTick((n) => n + 1);

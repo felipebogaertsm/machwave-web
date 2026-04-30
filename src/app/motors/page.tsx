@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApiClient, type MotorSummary } from "@/lib/api";
+import { canEdit, useTeamScope } from "@/lib/team-scope";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RunSimulationDialog } from "@/components/simulation/RunSimulationDialog";
@@ -28,6 +29,8 @@ export default function MotorsPage() {
 function MotorsContent() {
   const api = useApiClient();
   const router = useRouter();
+  const { scope, role, teamId } = useTeamScope();
+  const writable = canEdit(role);
   const { activeSim } = useActiveSimulation();
   const [motors, setMotors] = useState<MotorSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,11 +49,19 @@ function MotorsContent() {
   } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     api
-      .listMotors()
-      .then(setMotors)
-      .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      .listMotors(teamId)
+      .then((m) => {
+        if (!cancelled) setMotors(m);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, teamId]);
 
   function requestDelete(motorId: string, motorName: string) {
     setDeleteError(null);
@@ -64,7 +75,7 @@ function MotorsContent() {
     setDeleteError(null);
     setError(null);
     try {
-      await api.deleteMotor(id);
+      await api.deleteMotor(id, teamId);
       setMotors((prev) => prev.filter((m) => m.motor_id !== id));
       setPendingDelete(null);
     } catch {
@@ -107,6 +118,11 @@ function MotorsContent() {
               ({motors.length})
             </span>
           )}
+          {scope.kind === "team" && (
+            <Badge variant="secondary" className="ml-2">
+              {scope.team.name}
+            </Badge>
+          )}
         </div>
 
         {loading && (
@@ -126,7 +142,9 @@ function MotorsContent() {
           <Card>
             <CardContent className="py-8">
               <p className="text-sm text-muted-foreground">
-                No motors yet. Use the sidebar to create one.
+                {writable
+                  ? "No motors yet. Use the sidebar to create one."
+                  : "No motors in this team yet."}
               </p>
             </CardContent>
           </Card>
@@ -159,6 +177,7 @@ function MotorsContent() {
           }}
           request={pendingRun ? { motor_id: pendingRun.id } : null}
           motorName={pendingRun?.name}
+          teamId={teamId}
           onCreated={(res) => {
             setPendingRun(null);
             router.push(`/simulations/${res.simulation_id}`);
@@ -257,53 +276,59 @@ function MotorsContent() {
                           className="px-3 py-2 text-right"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-orange-500 hover:bg-orange-500/10 hover:text-orange-600"
-                              aria-label={`Run simulation for ${motor.name}`}
-                              title={
-                                activeSim
-                                  ? `Blocked — a simulation is already ${activeSim.status}`
-                                  : "Run simulation"
-                              }
-                              disabled={activeSim !== null}
-                              onClick={() =>
-                                requestSimulate(motor.motor_id, motor.name)
-                              }
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Edit ${motor.name}`}
-                              title="Edit"
-                              asChild
-                            >
-                              <Link href={`/motors/${motor.motor_id}/edit`}>
-                                <Pencil className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              aria-label={`Delete ${motor.name}`}
-                              title="Delete"
-                              disabled={deletingId === motor.motor_id}
-                              onClick={() =>
-                                requestDelete(motor.motor_id, motor.name)
-                              }
-                            >
-                              {deletingId === motor.motor_id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                          {writable ? (
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-orange-500 hover:bg-orange-500/10 hover:text-orange-600"
+                                aria-label={`Run simulation for ${motor.name}`}
+                                title={
+                                  activeSim
+                                    ? `Blocked — a simulation is already ${activeSim.status}`
+                                    : "Run simulation"
+                                }
+                                disabled={activeSim !== null}
+                                onClick={() =>
+                                  requestSimulate(motor.motor_id, motor.name)
+                                }
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Edit ${motor.name}`}
+                                title="Edit"
+                                asChild
+                              >
+                                <Link href={`/motors/${motor.motor_id}/edit`}>
+                                  <Pencil className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                aria-label={`Delete ${motor.name}`}
+                                title="Delete"
+                                disabled={deletingId === motor.motor_id}
+                                onClick={() =>
+                                  requestDelete(motor.motor_id, motor.name)
+                                }
+                              >
+                                {deletingId === motor.motor_id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              view only
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

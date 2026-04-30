@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useApiClient, type SimulationSummary } from "@/lib/api";
+import { useScopeTeamId } from "@/lib/team-scope";
 
-// Backend rejects new dispatches while the user has any pending/running sim.
-// Surface that to the UI so we can disable Run buttons before the round-trip.
+// Backend rejects new dispatches while the active pool has any pending/running
+// sim. Pools are scoped — a pending team sim doesn't block a personal run and
+// vice versa — so we look at sims in the same scope as the caller.
 export function useActiveSimulation() {
   const api = useApiClient();
+  const teamId = useScopeTeamId();
   const [activeSim, setActiveSim] = useState<SimulationSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -14,7 +17,7 @@ export function useActiveSimulation() {
   useEffect(() => {
     let cancelled = false;
     api
-      .listSimulations()
+      .listSimulations(teamId)
       .then((sims) => {
         if (cancelled) return;
         const active =
@@ -33,7 +36,7 @@ export function useActiveSimulation() {
     return () => {
       cancelled = true;
     };
-  }, [api, refreshTick]);
+  }, [api, teamId, refreshTick]);
 
   const refresh = () => setRefreshTick((n) => n + 1);
 
